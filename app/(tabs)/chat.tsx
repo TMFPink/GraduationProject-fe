@@ -1,17 +1,18 @@
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React, { useState } from 'react';
+import { getSocket, initSocket } from '@src/services/socket';
+import React, { useEffect, useState } from 'react';
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface Message {
@@ -33,29 +34,53 @@ export default function ChatScreen() {
     },
   ]);
   const [inputText, setInputText] = useState('');
+  
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [log, setLog] = useState<string[]>([]);
+
+  const userId = 'c8b1eae0-4de0-418e-8653-c57a89b3805c';
+  const receiverId = '25492b35-1985-4729-84ea-422040745d80';
+
+  useEffect(() => {
+    const socket = initSocket(userId);
+
+    socket.on('connect', () => {
+      console.log('🟢 Connected');
+      setIsConnected(true);
+      setLog((prev) => [...prev, '🟢 Connected to server']);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('🔴 Disconnected');
+      setIsConnected(false);
+      setLog((prev) => [...prev, '🔴 Disconnected']);
+    });
+
+    socket.on('receive_message', (msg) => {
+      console.log('📩 Received message:', msg);
+      setLog((prev) => [...prev, `📩 From ${msg.sender_id}: ${msg.content}`]);
+    });
+
+    socket.on('message_sent', (msg) => {
+      console.log('✅ Message sent:', msg);
+      setLog((prev) => [...prev, `✅ Sent: ${msg.content}`]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const sendMessage = () => {
-    if (inputText.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: inputText.trim(),
-        isUser: true,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, newMessage]);
-      setInputText('');
-      
-      // Simulate a response
-      setTimeout(() => {
-        const response: Message = {
-          id: (Date.now() + 1).toString(),
-          text: 'Thanks for your message! This is a demo response.',
-          isUser: false,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, response]);
-      }, 1000);
-    }
+    const socket = getSocket();
+    if (!socket) return;
+    socket.emit('send_message', {
+      sender_id: userId,
+      receiver_id: receiverId,
+      content: 'Hello from RN!',
+    });
+    setLog((prev) => [...prev, '📤 Message sent!']);
   };
 
   const renderMessage = ({ item }: { item: Message }) => (
