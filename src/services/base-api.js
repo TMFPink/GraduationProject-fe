@@ -1,10 +1,10 @@
 
-import { BASE_URL } from '@env';
 import axios from 'axios';
+import Constants from 'expo-constants';
 import { getToken } from '../utils/auth';
 
 const baseApi = axios.create({
-  baseURL: BASE_URL,
+  baseURL: Constants.expoConfig?.extra?.baseUrl || 'http://localhost:3000/v1',
   timeout: 10000,
 });
 
