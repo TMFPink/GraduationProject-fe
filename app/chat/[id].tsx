@@ -6,11 +6,10 @@ import { ChatUser, Message } from '@/src/types/chat';
 import { getUserData } from '@/src/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -27,12 +26,19 @@ export default function ChatConversationScreen() {
   const router = useRouter();
   const { id: receiverId, userName } = useLocalSearchParams();
   const { socket, isConnected } = useSocket();
-  
+
+  const flatListRef = useRef<FlatList>(null);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
   // Chat user data
   const chatUser: ChatUser = {
@@ -41,22 +47,16 @@ export default function ChatConversationScreen() {
     isOnline: true,
   };
 
-  // Load current user data and chat history
+  // Initialize chat
   useEffect(() => {
     const initializeChat = async () => {
       try {
-        // Get current user data
         const userData = await getUserData();
         if (userData && userData.user_id) {
           setCurrentUserId(userData.user_id);
-          
-          // Load chat history
-          const chatHistory = await chatApi.getChatHistory(receiverId as string);
-          if (chatHistory.statusCode === 200 && chatHistory.metadata) {
-            setMessages(chatHistory.metadata);
-          }
 
-          // Mark messages as read
+          // Load latest messages (page 1 = newest)
+          await loadChatHistory(1, true);
           await chatApi.markMessagesAsRead(receiverId as string);
         }
       } catch (error) {
@@ -70,12 +70,46 @@ export default function ChatConversationScreen() {
     initializeChat();
   }, [receiverId]);
 
+  // Load chat history (latest first)
+  const loadChatHistory = async (page: number, isInitial = false) => {
+    try {
+      if (!isInitial) setLoadingMoreMessages(true);
+
+      const chatHistory = await chatApi.getChatHistory(receiverId as string, page, 10);
+      if (chatHistory.statusCode === 200 && chatHistory.metadata?.messages) {
+        const rawMessages = chatHistory.metadata.messages;
+        const newMessages = isInitial ? rawMessages.reverse() : rawMessages; // ✅ only reverse first page
+
+        setMessages(prev =>
+          isInitial ? newMessages : [...newMessages, ...prev]
+        );
+
+        setHasMoreMessages(rawMessages.length === 20);
+      } else {
+        setHasMoreMessages(false);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      if (!isInitial) setLoadingMoreMessages(false);
+    }
+  };
+
+
+  // Load older messages on scroll up
+  const handleLoadMore = async () => {
+    if (loadingMoreMessages || !hasMoreMessages) return;
+
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    await loadChatHistory(nextPage);
+  };
+
   // Socket event listeners
   useEffect(() => {
     if (!socket || !currentUserId) return;
 
     const handleReceiveMessage = (msg: any) => {
-      console.log('📩 Received message:', msg);
       const newMessage: Message = {
         message_id: Date.now().toString(),
         sender_id: msg.sender_id,
@@ -85,11 +119,7 @@ export default function ChatConversationScreen() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, newMessage]);
-    };
-
-    const handleMessageSent = (msg: any) => {
-      console.log('✅ Message sent:', msg);
+      setMessages(prev => [newMessage, ...prev]); // append at bottom (since inverted)
     };
 
     const handleUserTyping = (data: any) => {
@@ -100,12 +130,10 @@ export default function ChatConversationScreen() {
     };
 
     socket.on('receive_message', handleReceiveMessage);
-    socket.on('message_sent', handleMessageSent);
     socket.on('user_typing', handleUserTyping);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
-      socket.off('message_sent', handleMessageSent);
       socket.off('user_typing', handleUserTyping);
     };
   }, [socket, currentUserId]);
@@ -123,7 +151,7 @@ export default function ChatConversationScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    setMessages(prev => [newMessage, ...prev]);
 
     socket.emit('send_message', {
       sender_id: currentUserId,
@@ -136,7 +164,6 @@ export default function ChatConversationScreen() {
 
   const handleTyping = (text: string) => {
     setInputText(text);
-    
     if (socket && text.length > 0 && currentUserId) {
       socket.emit('typing', {
         user_id: currentUserId,
@@ -158,7 +185,7 @@ export default function ChatConversationScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isCurrentUser = item.sender_id === currentUserId;
-    
+
     return (
       <View style={[
         styles.messageContainer,
@@ -168,15 +195,15 @@ export default function ChatConversationScreen() {
           <View style={styles.avatarContainer}>
             <View style={[styles.messageAvatarPlaceholder, { backgroundColor: generateAvatar(chatUser.name) }]}>
               <Text style={styles.messageAvatarText}>
-                {chatUser.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                {chatUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
               </Text>
             </View>
           </View>
         )}
-        
+
         <View style={[
           styles.messageBubble,
-          isCurrentUser 
+          isCurrentUser
             ? [styles.userBubble, { backgroundColor: colors.tint }]
             : [styles.botBubble, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#F3F4F6' }]
         ]}>
@@ -197,30 +224,33 @@ export default function ChatConversationScreen() {
     );
   };
 
+  const renderFooter = () => {
+    if (!loadingMoreMessages) return null;
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading older messages...</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { 
-        backgroundColor: colors.tint,
-        borderBottomColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB'
-      }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.tint }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        
+
         <View style={styles.headerInfo}>
-          {chatUser.avatar ? (
-            <Image source={{ uri: chatUser.avatar }} style={styles.headerAvatar} />
-          ) : (
-            <View style={[styles.headerAvatarPlaceholder, { backgroundColor: generateAvatar(chatUser.name) }]}>
-              <Text style={styles.headerAvatarText}>
-                {chatUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-              </Text>
-            </View>
-          )}
+          <View style={[styles.headerAvatarPlaceholder, { backgroundColor: generateAvatar(chatUser.name) }]}>
+            <Text style={styles.headerAvatarText}>
+              {chatUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+            </Text>
+          </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerName}>{chatUser.name}</Text>
             <Text style={styles.headerStatus}>
-              {isTyping ? 'typing...' : chatUser.isOnline ? 'online' : `last seen ${chatUser.lastSeen}`}
+              {isTyping ? 'typing...' : chatUser.isOnline ? 'online' : 'offline'}
             </Text>
           </View>
         </View>
@@ -229,29 +259,39 @@ export default function ChatConversationScreen() {
           <Ionicons name="ellipsis-vertical" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-      
-      <KeyboardAvoidingView 
+
+      {/* Chat area */}
+      <KeyboardAvoidingView
         style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <FlatList
+          ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.message_id}
-          style={styles.messagesList}
-          contentContainerStyle={styles.messagesContainer}
-          showsVerticalScrollIndicator={false}
+          inverted
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={renderFooter}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 1,
+          }}
+          contentContainerStyle={{ padding: 16 }}
         />
-        
-        <View style={[styles.inputContainer, { 
-          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
-          borderTopColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB'
-        }]}>
+
+        <View style={[
+          styles.inputContainer,
+          { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }
+        ]}>
           <TextInput
-            style={[styles.textInput, { 
-              backgroundColor: colorScheme === 'dark' ? '#374151' : '#F9FAFB',
-              color: colors.text 
-            }]}
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colorScheme === 'dark' ? '#374151' : '#F9FAFB',
+                color: colors.text
+              }
+            ]}
             value={inputText}
             onChangeText={handleTyping}
             placeholder="Type a message..."
@@ -259,12 +299,13 @@ export default function ChatConversationScreen() {
             multiline
             maxLength={500}
           />
-          <TouchableOpacity 
-            onPress={sendMessage} 
+          <TouchableOpacity
+            onPress={sendMessage}
             disabled={!inputText.trim()}
-            style={[styles.sendButton, { 
-              backgroundColor: inputText.trim() ? colors.tint : '#9CA3AF' 
-            }]}
+            style={[
+              styles.sendButton,
+              { backgroundColor: inputText.trim() ? colors.tint : '#9CA3AF' }
+            ]}
           >
             <Ionicons name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -273,6 +314,7 @@ export default function ChatConversationScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -423,5 +465,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

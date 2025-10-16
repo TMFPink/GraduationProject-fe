@@ -5,6 +5,11 @@ import { getToken } from "../utils/auth";
 const baseApi = axios.create({
   baseURL: Constants.expoConfig?.extra?.baseUrl || "http://localhost:3000/v1",
   timeout: 10000,
+  headers: {
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    Expires: "0",
+  },
 });
 
 // === Request Interceptor ===

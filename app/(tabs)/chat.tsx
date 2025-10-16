@@ -5,8 +5,9 @@ import { chatApi } from '@/src/api/chat-api';
 import { ChatSummary } from '@/src/types/chat';
 import { formatTime } from '@/src/utils/format-time';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -69,9 +70,13 @@ export default function ChatListScreen() {
     setRefreshing(false);
   };
 
-  useEffect(() => {
-    loadChatList();
-  }, []);
+  // Call loadChatList when the screen is focused/back from other pages
+  useFocusEffect(
+    useCallback(() => {
+      loadChatList();
+    }, [])
+  );
+
 
   const generateAvatar = (name: string) => {
     const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];

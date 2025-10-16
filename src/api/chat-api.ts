@@ -6,8 +6,14 @@ export const chatApi = {
     return convertToMetadata(response);
   },
 
-  getChatHistory: async (receiverId: string) => {
-    const response = await baseApi.get(`/chat/${receiverId}`);
+  getChatHistory: async (
+    receiverId: string,
+    page: number = 1,
+    limit: number = 10
+  ) => {
+    const response = await baseApi.get(
+      `/chat/${receiverId}?page=${page}&limit=${limit}`
+    );
     return convertToMetadata(response);
   },
 

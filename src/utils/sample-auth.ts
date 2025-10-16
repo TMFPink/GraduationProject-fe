@@ -12,10 +12,10 @@ export const setupSampleAuth = async () => {
 
   // Sample user data (replace with real user data from your API)
   const sampleUser: User = {
-    user_id: "25492b35-1985-4729-84ea-422040745d80",
-    first_name: "hong",
-    last_name: "tran",
-    email: "hong@gmail.com",
+    user_id: "042b2fc7-8674-4fac-b06b-ef795d7fee80",
+    first_name: "User-3",
+    last_name: "Test3",
+    email: "user3@example.com",
   };
 
   try {
