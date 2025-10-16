@@ -4,7 +4,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { chatApi } from '@/src/api/chat-api';
 import { ChatSummary } from '@/src/types/chat';
 import { formatTime } from '@/src/utils/format-time';
-import { isAuthenticated, setupSampleAuth } from '@/src/utils/sample-auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -71,33 +70,7 @@ export default function ChatListScreen() {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // For testing purposes - setup sample auth if not authenticated
-        console.log('Checking authentication status...');
-        const authenticated = await isAuthenticated();
-        console.log('Authentication status:', authenticated);
-        
-        // Force sample auth setup for testing (remove this condition to always run)
-        const forceSetupSampleAuth = false; // Set to true if you want to always run sample auth
-        
-        if (!authenticated || forceSetupSampleAuth) {
-          console.log('Setting up sample authentication for testing...');
-          await setupSampleAuth();
-          console.log('Sample auth setup completed, checking status again...');
-          const newAuthStatus = await isAuthenticated();
-          console.log('New authentication status:', newAuthStatus);
-        } else {
-          console.log('User is already authenticated, skipping sample auth setup');
-        }
-        
-        await loadChatList();
-      } catch (error) {
-        console.error('Error during authentication initialization:', error);
-      }
-    };
-
-    initializeAuth();
+    loadChatList();
   }, []);
 
   const generateAvatar = (name: string) => {

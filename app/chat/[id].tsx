@@ -1,10 +1,10 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { chatApi } from '@/src/api/chat-api';
+import { useSocket } from '@/src/contexts/socket-context';
 import { ChatUser, Message } from '@/src/types/chat';
 import { getUserData } from '@/src/utils/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { getSocket, initSocket } from '@src/services/socket';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -26,10 +26,10 @@ export default function ChatConversationScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { id: receiverId, userName } = useLocalSearchParams();
+  const { socket, isConnected } = useSocket();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -70,23 +70,11 @@ export default function ChatConversationScreen() {
     initializeChat();
   }, [receiverId]);
 
-  // Socket connection
+  // Socket event listeners
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!socket || !currentUserId) return;
 
-    const socket = initSocket(currentUserId);
-
-    socket.on('connect', () => {
-      console.log('🟢 Connected');
-      setIsConnected(true);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('🔴 Disconnected');
-      setIsConnected(false);
-    });
-
-    socket.on('receive_message', (msg) => {
+    const handleReceiveMessage = (msg: any) => {
       console.log('📩 Received message:', msg);
       const newMessage: Message = {
         message_id: Date.now().toString(),
@@ -98,26 +86,32 @@ export default function ChatConversationScreen() {
         updatedAt: new Date().toISOString(),
       };
       setMessages(prev => [...prev, newMessage]);
-    });
+    };
 
-    socket.on('message_sent', (msg) => {
+    const handleMessageSent = (msg: any) => {
       console.log('✅ Message sent:', msg);
-    });
+    };
 
-    socket.on('user_typing', (data) => {
+    const handleUserTyping = (data: any) => {
       if (data.user_id !== currentUserId) {
         setIsTyping(true);
         setTimeout(() => setIsTyping(false), 3000);
       }
-    });
+    };
+
+    socket.on('receive_message', handleReceiveMessage);
+    socket.on('message_sent', handleMessageSent);
+    socket.on('user_typing', handleUserTyping);
 
     return () => {
-      socket.disconnect();
+      socket.off('receive_message', handleReceiveMessage);
+      socket.off('message_sent', handleMessageSent);
+      socket.off('user_typing', handleUserTyping);
     };
-  }, [currentUserId]);
+  }, [socket, currentUserId]);
 
   const sendMessage = () => {
-    if (!inputText.trim() || !currentUserId) return;
+    if (!inputText.trim() || !currentUserId || !socket) return;
 
     const newMessage: Message = {
       message_id: Date.now().toString(),
@@ -131,14 +125,11 @@ export default function ChatConversationScreen() {
 
     setMessages(prev => [...prev, newMessage]);
 
-    const socket = getSocket();
-    if (socket) {
-      socket.emit('send_message', {
-        sender_id: currentUserId,
-        receiver_id: receiverId,
-        content: inputText.trim(),
-      });
-    }
+    socket.emit('send_message', {
+      sender_id: currentUserId,
+      receiver_id: receiverId,
+      content: inputText.trim(),
+    });
 
     setInputText('');
   };
@@ -146,7 +137,6 @@ export default function ChatConversationScreen() {
   const handleTyping = (text: string) => {
     setInputText(text);
     
-    const socket = getSocket();
     if (socket && text.length > 0 && currentUserId) {
       socket.emit('typing', {
         user_id: currentUserId,
