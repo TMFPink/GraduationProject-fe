@@ -51,7 +51,6 @@ export default function ChatListScreen() {
       const response = await chatApi.getChatList();
       if (response.statusCode === 200 && response.metadata) {
         setChatList(response.metadata.chat_list);
-        console.log('Chat list set:', chatList);
       } else {
         setChatList([]); 
         console.log('Unexpected response structure:', response);

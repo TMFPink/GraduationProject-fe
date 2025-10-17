@@ -21,6 +21,9 @@ import {
 } from 'react-native';
 
 export default function ChatConversationScreen() {
+
+  const PAGE_SIZE = 15;
+
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -39,6 +42,12 @@ export default function ChatConversationScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const [isLoadingOldMessages, setIsLoadingOldMessages] = useState(false);
+
+  const initialLoadedRef = React.useRef(false);
+  const scrollOffsetRef = useRef(0);
+  const prevContentHeightRef = useRef(0);
+
 
   // Chat user data
   const chatUser: ChatUser = {
@@ -48,62 +57,71 @@ export default function ChatConversationScreen() {
   };
 
   // Initialize chat
+
   useEffect(() => {
     const initializeChat = async () => {
       try {
         const userData = await getUserData();
-        if (userData && userData.user_id) {
+        if (userData?.user_id) {
           setCurrentUserId(userData.user_id);
 
-          // Load latest messages (page 1 = newest)
-          await loadChatHistory(1, true);
+          await loadChatHistory(1, true);          // strictly await page 1
+          initialLoadedRef.current = true;          // allow pagination afterwards
           await chatApi.markMessagesAsRead(receiverId as string);
         }
-      } catch (error) {
-        console.error('Error initializing chat:', error);
+      } catch (e) {
+        console.error('Error initializing chat:', e);
         Alert.alert('Error', 'Failed to load chat history');
       } finally {
         setLoading(false);
       }
     };
-
     initializeChat();
   }, [receiverId]);
 
   // Load chat history (latest first)
   const loadChatHistory = async (page: number, isInitial = false) => {
     try {
-      if (!isInitial) setLoadingMoreMessages(true);
 
-      const chatHistory = await chatApi.getChatHistory(receiverId as string, page, 10);
-      if (chatHistory.statusCode === 200 && chatHistory.metadata?.messages) {
-        const rawMessages = chatHistory.metadata.messages;
-        const newMessages = isInitial ? rawMessages.reverse() : rawMessages; // ✅ only reverse first page
+      if (!isInitial) {
+        setLoadingMoreMessages(true);
+        setIsLoadingOldMessages(true); // mark loading older data
+      }
 
-        setMessages(prev =>
-          isInitial ? newMessages : [...newMessages, ...prev]
+      const res = await chatApi.getChatHistory(receiverId as string, page, PAGE_SIZE);
+
+      if (res.statusCode === 200 && res.metadata?.messages) {
+        const raw = res.metadata.messages as Message[];
+        const asc = [...raw].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
-
-        setHasMoreMessages(rawMessages.length === 20);
+        setMessages(prev => (isInitial ? asc : [...asc, ...prev]));
+        setHasMoreMessages(raw.length === PAGE_SIZE);
+        setCurrentPage(page);
       } else {
         setHasMoreMessages(false);
       }
-    } catch (error) {
-      console.error('Error loading chat history:', error);
+    } catch (err) {
+      console.error('Error loading chat history:', err);
     } finally {
-      if (!isInitial) setLoadingMoreMessages(false);
+      if (!isInitial) {
+        setLoadingMoreMessages(false);
+        setTimeout(() => setIsLoadingOldMessages(false), 300);
+      }
     }
   };
 
 
   // Load older messages on scroll up
   const handleLoadMore = async () => {
+    // Block early triggers on mount
+    if (!initialLoadedRef.current) return;
     if (loadingMoreMessages || !hasMoreMessages) return;
-
     const nextPage = currentPage + 1;
     setCurrentPage(nextPage);
     await loadChatHistory(nextPage);
   };
+
 
   // Socket event listeners
   useEffect(() => {
@@ -119,7 +137,7 @@ export default function ChatConversationScreen() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setMessages(prev => [newMessage, ...prev]); // append at bottom (since inverted)
+      setMessages(prev => [...prev,newMessage]);
     };
 
     const handleUserTyping = (data: any) => {
@@ -151,7 +169,7 @@ export default function ChatConversationScreen() {
       updatedAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [newMessage, ...prev]);
+    setMessages(prev => [...prev, newMessage]);
 
     socket.emit('send_message', {
       sender_id: currentUserId,
@@ -270,15 +288,47 @@ export default function ChatConversationScreen() {
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.message_id}
-          inverted
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={renderFooter}
           maintainVisibleContentPosition={{
             minIndexForVisible: 1,
           }}
-          contentContainerStyle={{ padding: 16 }}
+
+          ListHeaderComponent={
+            loadingMoreMessages ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading older messages...</Text>
+              </View>
+            ) : null
+          }
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          onScroll={({ nativeEvent }) => {
+            scrollOffsetRef.current = nativeEvent.contentOffset.y;
+
+            if (
+              nativeEvent.contentOffset.y <= 0 &&
+              !loadingMoreMessages &&
+              hasMoreMessages
+            ) {
+              handleLoadMore();
+            }
+          }}
+          scrollEventThrottle={16}
+          onContentSizeChange={(width, height) => {
+            if (isLoadingOldMessages && flatListRef.current) {
+              const heightDiff = height - prevContentHeightRef.current;
+              if (heightDiff > 0) {
+                flatListRef.current.scrollToOffset({
+                  offset: heightDiff,
+                  animated: false,
+                });
+              }
+            } else if (!isLoadingOldMessages && flatListRef.current) {
+              flatListRef.current.scrollToEnd({ animated: true });
+            }
+            prevContentHeightRef.current = height;
+          }}
         />
+
+
 
         <View style={[
           styles.inputContainer,
@@ -473,5 +523,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontStyle: 'italic',
+    color: '#6B7280',
   },
 });
