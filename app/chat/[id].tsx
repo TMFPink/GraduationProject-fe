@@ -47,6 +47,8 @@ export default function ChatConversationScreen() {
   const initialLoadedRef = React.useRef(false);
   const scrollOffsetRef = useRef(0);
   const prevContentHeightRef = useRef(0);
+  const hasScrolledToBottomRef = useRef(false);
+
 
 
   // Chat user data
@@ -171,6 +173,10 @@ export default function ChatConversationScreen() {
 
     setMessages(prev => [...prev, newMessage]);
 
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100); // short delay to allow layout update
+
     socket.emit('send_message', {
       sender_id: currentUserId,
       receiver_id: receiverId,
@@ -179,6 +185,7 @@ export default function ChatConversationScreen() {
 
     setInputText('');
   };
+
 
   const handleTyping = (text: string) => {
     setInputText(text);
@@ -311,8 +318,9 @@ export default function ChatConversationScreen() {
               handleLoadMore();
             }
           }}
-          scrollEventThrottle={16}
+          scrollEventThrottle={1000}
           onContentSizeChange={(width, height) => {
+            // --- Case 1: user is loading old messages (scroll up) ---
             if (isLoadingOldMessages && flatListRef.current) {
               const heightDiff = height - prevContentHeightRef.current;
               if (heightDiff > 0) {
@@ -321,9 +329,26 @@ export default function ChatConversationScreen() {
                   animated: false,
                 });
               }
-            } else if (!isLoadingOldMessages && flatListRef.current) {
-              flatListRef.current.scrollToEnd({ animated: true });
             }
+
+            // --- Case 2: first time entering the chat ---
+            else if (
+              !isLoadingOldMessages &&
+              flatListRef.current &&
+              !hasScrolledToBottomRef.current &&
+              !loadingMoreMessages
+            ) {
+              console.log('Scrolling to bottom on initial load');
+
+              // Delay scroll until layout completes
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({ animated: false });
+                  hasScrolledToBottomRef.current = true;
+                }, 200); // tiny delay (50ms is enough)
+              });
+            }
+
             prevContentHeightRef.current = height;
           }}
         />
