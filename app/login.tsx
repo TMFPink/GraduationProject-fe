@@ -1,3 +1,4 @@
+import { useSocket } from '@/src/contexts/socket-context';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setAuthData } = useAuth();
+  const { initializeSocket } = useSocket();
 
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
@@ -49,6 +51,7 @@ export default function LoginScreen() {
       setAuthData(responseToken.metadata.accessToken);
 
       // Navigate to main app
+    await initializeSocket();
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Login failed:', error);

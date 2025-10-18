@@ -129,7 +129,7 @@ export default function ChatConversationScreen() {
   useEffect(() => {
     if (!socket || !currentUserId) return;
 
-    const handleReceiveMessage = (msg: any) => {
+    const handleReceiveMessage = async (msg: any) => {
       const newMessage: Message = {
         message_id: Date.now().toString(),
         sender_id: msg.sender_id,
@@ -140,6 +140,16 @@ export default function ChatConversationScreen() {
         updatedAt: new Date().toISOString(),
       };
       setMessages(prev => [...prev,newMessage]);
+
+      // Auto-scroll to bottom when a new message arrives
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        });
+      }, 100);
+
+      await chatApi.markMessagesAsRead(receiverId as string);
+
     };
 
     const handleUserTyping = (data: any) => {
@@ -240,7 +250,11 @@ export default function ChatConversationScreen() {
           </Text>
           <Text style={[
             styles.messageTime,
-            { color: isCurrentUser ? 'rgba(255, 255, 255, 0.7)' : colors.icon }
+            { 
+              color: isCurrentUser ? 'rgba(255, 255, 255, 0.7)' : colors.icon ,
+              alignSelf: isCurrentUser ? 'flex-end' : 'flex-start'
+            }
+            
           ]}>
             {formatTime(item.createdAt)}
           </Text>
@@ -516,7 +530,6 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 11,
     marginTop: 4,
-    alignSelf: 'flex-end',
   },
   inputContainer: {
     flexDirection: 'row',

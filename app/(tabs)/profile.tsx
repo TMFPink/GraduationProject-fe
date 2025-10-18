@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/src/contexts/auth-context';
+import { useSocket } from '@/src/contexts/socket-context';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -31,13 +32,13 @@ interface UserInfo {
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const { user, logout } = useAuth();
+  const { disconnectSocket } = useSocket();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   
-
   // Use actual user data from auth context
   const userInfo = user ? {
-    name: `${user.first_name} ${user.last_name}`,
+    name: `${user.name}`,
     email: user.email,
     role: user.role_id, // You might want to map this to a readable role name
     phone: user.phone_number,
@@ -47,7 +48,7 @@ export default function ProfileScreen() {
       completed: 8,
       inProgress: 4,
     },
-    joinDate: 'January 2024', // You might want to calculate this from user creation date
+    joinDate: 'October 2025', // You might want to calculate this from user creation date
   } : null;
 
   const [notifications, setNotifications] = useState(true);
@@ -57,9 +58,17 @@ export default function ProfileScreen() {
     Alert.alert('Edit Profile', 'Profile editing functionality would be implemented here.');
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/login')
+  const handleLogout = async () => {
+    try {
+      
+      disconnectSocket();
+      
+      await logout();
+      
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const StatCard = ({ title, value, color }: { title: string; value: number; color: string }) => (

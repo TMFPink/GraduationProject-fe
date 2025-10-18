@@ -2,12 +2,14 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { chatApi } from '@/src/api/chat-api';
+import { useSocket } from '@/src/contexts/socket-context';
 import { ChatSummary } from '@/src/types/chat';
+import { getUserData } from '@/src/utils/auth';
 import { formatTime } from '@/src/utils/format-time';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -25,10 +27,12 @@ export default function ChatListScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { socket } = useSocket();
   const [searchText, setSearchText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [chatList, setChatList] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
 
   const filteredChats = chatList.filter(chat =>
     chat.first_name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -73,17 +77,42 @@ export default function ChatListScreen() {
   useFocusEffect(
     useCallback(() => {
       loadChatList();
+      // Get current user ID for socket events
+      getUserData().then(userData => {
+        if (userData?.user_id) {
+          setCurrentUserId(userData.user_id);
+        }
+      });
     }, [])
   );
 
+  // Socket listener for chat list refresh
+  useEffect(() => {
+    if (!socket || !currentUserId) return;
+
+    const handleRefreshChatList = () => {
+      loadChatList();
+    };
+
+    const handleReceiveMessage = async (msg: any) => {
+      // Refresh chat list when receiving a message
+      loadChatList();
+    };
+
+    socket.on('refresh_chat_list', handleRefreshChatList);
+    socket.on('receive_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('refresh_chat_list', handleRefreshChatList);
+      socket.off('receive_message', handleReceiveMessage);
+    };
+  }, [socket, currentUserId]);
 
   const generateAvatar = (name: string) => {
     const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
   };
-
-
 
   const renderChatItem = ({ item }: { item: ChatSummary }) => {
     const fullName = item.last_name ? `${item.first_name} ${item.last_name}` : item.first_name;
