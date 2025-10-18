@@ -1,17 +1,19 @@
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/src/contexts/auth-context';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface UserInfo {
@@ -28,19 +30,25 @@ interface UserInfo {
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
+  const { user, logout } = useAuth();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
   
-  const [userInfo] = useState<UserInfo>({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'Senior Developer',
-    joinDate: 'January 2024',
+
+  // Use actual user data from auth context
+  const userInfo = user ? {
+    name: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    role: user.role_id, // You might want to map this to a readable role name
+    phone: user.phone_number,
+    id: user.user_id,
     stats: {
-      projects: 12,
+      projects: 12, // These would come from your API
       completed: 8,
       inProgress: 4,
     },
-  });
+    joinDate: 'January 2024', // You might want to calculate this from user creation date
+  } : null;
 
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(colorScheme === 'dark');
@@ -50,14 +58,8 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => console.log('User logged out') },
-      ]
-    );
+    logout();
+    router.replace('/login')
   };
 
   const StatCard = ({ title, value, color }: { title: string; value: number; color: string }) => (
@@ -108,31 +110,39 @@ export default function ProfileScreen() {
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#FFFFFF' }]}>
-          <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
-            <Text style={styles.avatarText}>{userInfo.name.split(' ').map(n => n[0]).join('')}</Text>
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={[styles.userName, { color: colors.text }]}>{userInfo.name}</Text>
-            <Text style={[styles.userEmail, { color: colors.icon }]}>{userInfo.email}</Text>
-            <Text style={[styles.userRole, { color: colors.tint }]}>{userInfo.role}</Text>
-            <Text style={[styles.joinDate, { color: colors.icon }]}>Member since {userInfo.joinDate}</Text>
-          </View>
+        {userInfo ? (
+          <>
+            {/* Profile Card */}
+            <View style={[styles.profileCard, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#FFFFFF' }]}>
+              <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
+                <Text style={styles.avatarText}>{userInfo.name.split(' ').map(n => n[0]).join('')}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={[styles.userName, { color: colors.text }]}>{userInfo.name}</Text>
+                <Text style={[styles.userEmail, { color: colors.icon }]}>{userInfo.email}</Text>
+                <Text style={[styles.userRole, { color: colors.tint }]}>{userInfo.role}</Text>
+                <Text style={[styles.joinDate, { color: colors.icon }]}>Member since {userInfo.joinDate}</Text>
+              </View>
           <TouchableOpacity 
             style={[styles.editButton, { backgroundColor: colors.tint }]}
             onPress={handleEditProfile}
           >
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
-        </View>
+            </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <StatCard title="Total Projects" value={userInfo.stats.projects} color={colors.tint} />
-          <StatCard title="Completed" value={userInfo.stats.completed} color="#10B981" />
-          <StatCard title="In Progress" value={userInfo.stats.inProgress} color="#F59E0B" />
-        </View>
+            {/* Stats */}
+            <View style={styles.statsContainer}>
+              <StatCard title="Total Projects" value={userInfo.stats.projects} color={colors.tint} />
+              <StatCard title="Completed" value={userInfo.stats.completed} color="#10B981" />
+              <StatCard title="In Progress" value={userInfo.stats.inProgress} color="#F59E0B" />
+            </View>
+          </>
+        ) : (
+          <View style={[styles.profileCard, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#FFFFFF' }]}>
+            <Text style={[styles.userName, { color: colors.text }]}>Loading user data...</Text>
+          </View>
+        )}
 
         {/* Settings */}
         <View style={styles.settingsSection}>

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/src/contexts/auth-context';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -25,6 +26,24 @@ interface Card {
 export default function CardListScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+          }
+        }
+      ]
+    );
+  };
   
   const [cards] = useState<Card[]>([
     {
@@ -117,7 +136,11 @@ export default function CardListScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.tint }]}>
-        <ThemedText type="title" style={styles.headerText}>Card List</ThemedText>
+        <View style={styles.headerContent}>
+          <View>
+            <ThemedText type="title" style={styles.headerText}>Card List</ThemedText>
+          </View>
+        </View>
       </View>
       
       <FlatList
@@ -141,10 +164,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   headerText: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  welcomeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    opacity: 0.9,
+    marginTop: 4,
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   cardList: {
     flex: 1,
