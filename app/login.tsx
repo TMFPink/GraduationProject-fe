@@ -25,7 +25,7 @@ export default function LoginScreen() {
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { setAuthData } = useAuth();
+  const { setAuthData, setCurrentUser } = useAuth();
   const { initializeSocket } = useSocket();
 
   const handleLogin = async () => {
@@ -58,6 +58,7 @@ export default function LoginScreen() {
       // Update auth context
       console.log('Login response token:', responseToken);
       setAuthData(responseToken.metadata.accessToken);
+      setCurrentUser(userData.metadata);
 
       // Navigate to main app
       await initializeSocket();

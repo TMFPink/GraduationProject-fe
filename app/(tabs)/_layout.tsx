@@ -5,6 +5,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -25,7 +26,9 @@ export default function TabLayout() {
         name="feeds"
         options={{
           title: 'Feed',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="newspaper" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -42,18 +45,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Chat',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
-        }}
-      /> */}
       <Tabs.Screen
         name="collections"
         options={{
           title: 'Collections',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bookmark" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="cards-outline" color={color} size={size} />
+            ),
         }}
       />
       <Tabs.Screen
