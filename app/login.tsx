@@ -1,21 +1,22 @@
+import { authApi } from '@/src/api/auth-api';
 import { useSocket } from '@/src/contexts/socket-context';
+import { setToken, setUserData } from '@/src/utils/auth';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuth } from '../src/contexts/auth-context';
 import { LoginRequest } from '../src/types/auth';
-import { login } from '../src/utils/auth';
 
 export default function LoginScreen() {
   const [formData, setFormData] = useState<LoginRequest>({
@@ -41,17 +42,25 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const responseToken = await login(formData);
+      const responseToken = await authApi.login(formData.email, formData.password);
       
       if (!responseToken || !responseToken.metadata) {
         throw new Error('Invalid response from server');
       }
+
+      // Store token
+      await setToken(responseToken.metadata.accessToken);
+      
+      // Get and store user data
+      const userData = await authApi.getCurrentUser();
+      await setUserData(userData.metadata);
+      
       // Update auth context
       console.log('Login response token:', responseToken);
       setAuthData(responseToken.metadata.accessToken);
 
       // Navigate to main app
-    await initializeSocket();
+      await initializeSocket();
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Login failed:', error);

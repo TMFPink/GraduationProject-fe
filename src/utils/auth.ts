@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { authApi } from "../api/auth-api";
-import { LoginRequest, User } from "../types/auth";
+import { User } from "../types/auth";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user_data";
@@ -53,36 +52,6 @@ export const removeUserData = async (): Promise<void> => {
     await AsyncStorage.removeItem(USER_KEY);
   } catch (error) {
     console.error("Error removing user data:", error);
-  }
-};
-
-export const login = async (credentials: LoginRequest) => {
-  try {
-    const response = await authApi.login(
-      credentials.email,
-      credentials.password
-    );
-
-    // Store token and user data
-    console.log("response in login utils:", response);
-    await setToken(response.metadata.accessToken);
-    const userData = await authApi.getCurrentUser();
-    await setUserData(userData.metadata);
-    return response;
-  } catch (error) {
-    console.error("Login error:", error);
-    throw error;
-  }
-};
-
-export const getCurrentUser = async (): Promise<User | null> => {
-  try {
-    const response = await authApi.getCurrentUser();
-    console.log("getCurrentUser in auth utils:", response);
-    return response.metadata;
-  } catch (error) {
-    console.error("Error getting current user:", error);
-    return null;
   }
 };
 
