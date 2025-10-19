@@ -6,6 +6,12 @@ export interface ChatSummary {
   last_message_time: string;
   unread_count: number;
 }
+export interface MessageResponse {
+  messages: Message[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 export interface Message {
   message_id: string;
