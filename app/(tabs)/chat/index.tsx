@@ -42,7 +42,7 @@ export default function ChatListScreen() {
 
   const handleChatPress = (chat: ChatSummary) => {
     const fullName = chat.last_name ? `${chat.first_name} ${chat.last_name}` : chat.first_name;
-    router.push(`/chat/${chat.user_id}?userName=${encodeURIComponent(fullName)}` as any);
+    router.push(`/(tabs)/chat/${chat.user_id}?userName=${encodeURIComponent(fullName)}` as any);
   };
 
   const handleNewChat = () => {
