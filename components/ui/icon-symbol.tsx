@@ -21,6 +21,8 @@ const MAPPING = {
   'message.fill': 'chat-bubble',
   'rectangle.stack.fill': 'dashboard',
   'person.fill': 'account-circle',
+  'newspaper': 'feed',
+  'bookmark': 'collections-bookmark',
 } as IconMapping;
 
 /**

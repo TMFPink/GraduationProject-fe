@@ -1,240 +1,353 @@
-import { ThemedText } from '@/components/themed-text';
+import Posts from '@/components/ui/post';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React, { useState } from 'react';
+import { Post } from '@/src/types/post';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
+  Dimensions,
   FlatList,
-  Platform,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
-interface Card {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  date: string;
-  status: 'active' | 'completed' | 'pending';
-}
+const { width } = Dimensions.get('window');
+const ANNOUNCEMENT_WIDTH = width * 0.8;
 
-export default function CardListScreen() {
+export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  const [cards] = useState<Card[]>([
+
+  const [newCollection, setNewCollection] = useState([
     {
       id: '1',
-      title: 'Project Alpha',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-      category: 'Development',
-      date: '2024-01-15',
-      status: 'active',
+      name: 'EcoSmart Lamp',
+      category: 'Lighting',
+      edition: 'Premium',
+      price: '$39.99',
     },
     {
       id: '2',
-      title: 'Design System',
-      description: 'Building a comprehensive design system for the application.',
-      category: 'UI/UX',
-      date: '2024-01-10',
-      status: 'completed',
+      name: 'Bamboo Speaker',
+      category: 'Audio',
+      edition: 'Classic',
+      price: '$59.99',
     },
     {
       id: '3',
-      title: 'API Integration',
-      description: 'Integrating third-party APIs for enhanced functionality.',
-      category: 'Backend',
-      date: '2024-01-20',
-      status: 'pending',
-    },
-    {
-      id: '4',
-      title: 'User Testing',
-      description: 'Conducting user testing sessions to improve UX.',
-      category: 'Research',
-      date: '2024-01-25',
-      status: 'active',
-    },
-    {
-      id: '5',
-      title: 'Performance Optimization',
-      description: 'Optimizing app performance and reducing load times.',
-      category: 'Development',
-      date: '2024-01-30',
-      status: 'pending',
+      name: 'Solar Charger',
+      category: 'Accessories',
+      edition: 'Compact',
+      price: '$29.99',
     },
   ]);
 
-  const getStatusColor = (status: Card['status']) => {
-    switch (status) {
-      case 'active':
-        return colors.tint;
-      case 'completed':
-        return '#10B981';
-      case 'pending':
-        return '#F59E0B';
-      default:
-        return colors.icon;
-    }
-  };
+  const [newsItems, setNewsItems] = useState<Post[]>([
+    {
+      id: '1',
+      authorId: 'author-1',
+      authorName: 'Vitaluxe Official',
+      createdAt: 'Oct 15, 2025',
+      updatedAt: 'Oct 15, 2025',
+      content: 'We just launched our new eco-friendly enzyme cleaner! 🌱',
+      likesCount: 230,
+      commentsCount: 18,
+    },
+    {
+      id: '2',
+      authorId: 'author-2',
+      authorName: 'Homecare Daily',
+      createdAt: 'Oct 10, 2025',
+      updatedAt: 'Oct 10, 2025',
+      content:
+        'Learn why enzyme-based cleaning is revolutionizing the industry.',
+      likesCount: 180,
+      commentsCount: 22,
+    },
+  ]);
 
-  const handleCardPress = (card: Card) => {
-    Alert.alert(card.title, `Status: ${card.status}\nCategory: ${card.category}\nDate: ${card.date}\n\n${card.description}`);
-  };
+  const announcements = [
+    {
+      id: '1',
+      title: 'Holiday Discount!',
+      description:
+        'Enjoy up to 30% off on all Vitaluxe products until November 30.',
+    },
+    {
+      id: '2',
+      title: 'New Store Opening',
+      description:
+        'We’re expanding! Visit our new flagship store in District 1.',
+    },
+    {
+      id: '3',
+      title: 'Join Our Eco Challenge',
+      description:
+        'Participate in our #CleanWithEnzyme challenge to win free gifts!',
+    },
+  ];
 
-  const renderCard = ({ item }: { item: Card }) => (
-    <TouchableOpacity
-      style={[styles.card, { 
-        backgroundColor: colorScheme === 'dark' ? '#374151' : '#FFFFFF',
-        shadowColor: colorScheme === 'dark' ? '#000000' : '#000000',
-      }]}
-      onPress={() => handleCardPress(item)}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{item.title}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusText}>{item.status}</Text>
-          </View>
-        </View>
-        
-        <Text style={[styles.cardDescription, { color: colors.icon }]}>{item.description}</Text>
-        
-        <View style={styles.cardFooter}>
-          <View style={[styles.categoryBadge, { backgroundColor: colors.tint + '20' }]}>
-            <Text style={[styles.categoryText, { color: colors.tint }]}>{item.category}</Text>
-          </View>
-          <Text style={[styles.dateText, { color: colors.icon }]}>{item.date}</Text>
-        </View>
+  const flatListRef = useRef<FlatList>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % announcements.length;
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      setCurrentIndex(nextIndex);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [currentIndex]);
+
+  const renderProductItem = ({
+    item,
+  }: {
+    item: { id: string; name: string; category: string; edition: string; price: string };
+  }) => (
+    <View style={styles.productCard}>
+      <View style={styles.productImagePlaceholder}>
+        <MaterialCommunityIcons name="image" size={40} color="#ccc" />
       </View>
-    </TouchableOpacity>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productCategory}>{item.category}</Text>
+        <Text style={styles.productEdition}>{item.edition}</Text>
+        <Text style={styles.productPrice}>{item.price}</Text>
+      </View>
+    </View>
+  );
+
+  const renderNewsItem = ({ item }: { item: Post }) => (
+    <View style={styles.postCard}>
+      <Text style={styles.postUsername}>{item.authorName}</Text>
+      <Text style={styles.postDate}>{item.createdAt}</Text>
+      <Text style={styles.postContent}>{item.content}</Text>
+      <View style={styles.postFooter}>
+        <Text style={styles.postStat}>❤️ {item.likesCount}</Text>
+        <Text style={styles.postStat}>💬 {item.commentsCount}</Text>
+      </View>
+    </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.tint }]}>
-        <View style={styles.headerContent}>
-          <View>
-            <ThemedText type="title" style={styles.headerText}>Card List</ThemedText>
+    <View style={[styles.background, { backgroundColor: colors.tint }]}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 🔵 Header Section */}
+        <View style={styles.headerWrapper}>
+          <View style={styles.headingRow}>
+            <Text style={styles.headingText}>Vitaluxe</Text>
+            <Text style={styles.dateText}>Welcome back!</Text>
+          </View>
+
+          {/* 🔔 Announcements Carousel */}
+          <View style={styles.announcementsContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={announcements}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.announcementCard}>
+                  <MaterialCommunityIcons
+                    name="bullhorn-outline"
+                    size={26}
+                    color={colors.tint}
+                  />
+                  <Text style={[styles.announcementTitle, { color: colors.tint }]}>
+                    ANNOUNCEMENT
+                  </Text>
+                  <Text style={styles.announcementSubtitle}>{item.title}</Text>
+                  <Text style={styles.announcementDescription}>
+                    {item.description}
+                  </Text>
+                </View>
+              )}
+            />
           </View>
         </View>
-      </View>
-      
-      <FlatList
-        data={cards}
-        renderItem={renderCard}
-        keyExtractor={(item) => item.id}
-        style={styles.cardList}
-        contentContainerStyle={styles.cardListContainer}
-        showsVerticalScrollIndicator={false}
-      />
-    </SafeAreaView>
+
+        {/* ⚪ Main Content */}
+        <View style={styles.contentWrapper}>
+          {/* 🟢 New Collection */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>New Collection</Text>
+            <TouchableOpacity style={styles.viewButton}>
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={newCollection}
+            renderItem={renderProductItem}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+
+          {/* 📰 News Section */}
+          <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+            <Text style={styles.sectionTitle}>News</Text>
+            <TouchableOpacity style={styles.viewButton}>
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={newsItems}
+            renderItem={({ item }) => (
+              <Posts
+                post={item}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
   },
-  header: {
-    paddingVertical: 20,
+  headerWrapper: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: 70,
+    paddingBottom: 40,
   },
-  headerContent: {
+  headingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerText: {
-    color: '#FFFFFF',
-    fontSize: 24,
+  headingText: {
+    fontSize: 34,
     fontWeight: 'bold',
+    color: '#fff',
   },
-  welcomeText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    opacity: 0.9,
-    marginTop: 4,
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  dateText: {
+    backgroundColor: '#E9F3FF',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 10,
     fontWeight: '600',
+    color: '#003366',
   },
-  cardList: {
-    flex: 1,
+  announcementsContainer: {
+    marginTop: 20,
+    alignItems: 'center',
   },
-  cardListContainer: {
-    padding: 16,
-  },
-  card: {
-    marginBottom: 16,
-    borderRadius: 12,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+  announcementCard: {
+    width: ANNOUNCEMENT_WIDTH,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+    marginHorizontal: (width - ANNOUNCEMENT_WIDTH) / 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  cardContent: {
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#FFFFFF',
+  announcementTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    textTransform: 'capitalize',
+    marginTop: 6,
   },
-  cardDescription: {
+  announcementSubtitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  announcementDescription: {
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 4,
   },
-  cardFooter: {
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  viewButton: {
+    backgroundColor: '#E9F3FF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderRadius: 8,
   },
-  categoryText: {
-    fontSize: 12,
+  viewButtonText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#003366',
   },
-  dateText: {
-    fontSize: 12,
+  productCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
+  productImagePlaceholder: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#F0F4F8',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  productInfo: { flex: 1, justifyContent: 'center' },
+  productName: { fontSize: 16, fontWeight: 'bold', color: '#003366' },
+  productCategory: { fontSize: 14, color: '#666', marginTop: 4 },
+  productEdition: { fontSize: 14, color: '#666', marginTop: 2 },
+  productPrice: { fontSize: 16, fontWeight: '600', color: '#0A3981', marginTop: 6 },
+
+  // 📰 Post Styles
+  postCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  postUsername: { fontSize: 14, fontWeight: 'bold', color: '#0A3981' },
+  postDate: { fontSize: 12, color: '#777', marginBottom: 6 },
+  postContent: { fontSize: 14, color: '#333', marginBottom: 8 },
+  postFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  postStat: { fontSize: 13, color: '#555' },
 });
