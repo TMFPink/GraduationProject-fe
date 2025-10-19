@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { User } from "../types/chat";
+import { User } from "../types/auth";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "user_data";
@@ -53,4 +53,18 @@ export const removeUserData = async (): Promise<void> => {
   } catch (error) {
     console.error("Error removing user data:", error);
   }
+};
+
+export const logout = async (): Promise<void> => {
+  try {
+    await removeToken();
+    await removeUserData();
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
+
+export const isAuthenticated = async (): Promise<boolean> => {
+  const token = await getToken();
+  return !!token;
 };

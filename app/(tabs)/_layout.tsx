@@ -21,18 +21,39 @@ export default function TabLayout() {
           borderTopWidth: 1,
         },
       }}>
-      <Tabs.Screen
-        name="index"
+        <Tabs.Screen
+        name="feeds"
         options={{
-          title: 'Cards',
+          title: 'Feed',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="newspaper" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="decks"
+        options={{
+          title: 'Decks',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="rectangle.stack.fill" color={color} />,
         }}
       />
       <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+        }}
+      />
+      {/* <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+        }}
+      /> */}
+      <Tabs.Screen
+        name="collections"
+        options={{
+          title: 'Collections',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bookmark" color={color} />,
         }}
       />
       <Tabs.Screen

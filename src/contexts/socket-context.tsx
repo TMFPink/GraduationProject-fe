@@ -53,6 +53,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSocket(null);
       setIsConnected(false);
     }
+    else{
+      console.log('⚠️ No socket to disconnect');
+    }
   };
 
   useEffect(() => {
