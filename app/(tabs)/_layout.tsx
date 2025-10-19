@@ -25,7 +25,7 @@ export default function TabLayout() {
         <Tabs.Screen
         name="feeds"
         options={{
-          title: 'Feed',
+          title: 'Feeds',
           tabBarIcon: ({ color, size }) => (
             <Feather name="users" color={color} size={size} />
           ),

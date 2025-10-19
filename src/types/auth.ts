@@ -4,10 +4,7 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  message: string;
-  metadata: {
-    accessToken: string;
-  };
+  accessToken: string;
 }
 
 export interface User {

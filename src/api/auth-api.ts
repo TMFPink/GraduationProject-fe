@@ -1,10 +1,13 @@
 import baseApi, { convertToMetadata } from "../services/base-api";
 import { ApiResponse } from "../types/api";
-import { User } from "../types/auth";
+import { LoginResponse, User } from "../types/auth";
 
 export const authApi = {
   // Login user
-  login: async (email: string, password: string) => {
+  login: async (
+    email: string,
+    password: string
+  ): Promise<ApiResponse<LoginResponse>> => {
     const response = await baseApi.post("/auth/login", { email, password });
     return convertToMetadata(response);
   },

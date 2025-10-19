@@ -1,7 +1,9 @@
 import baseApi, { convertToMetadata } from "../services/base-api";
+import { ApiResponse } from "../types/api";
+import { ChatSummary, Message } from "../types/chat";
 
 export const chatApi = {
-  getChatList: async () => {
+  getChatList: async (): Promise<ApiResponse<ChatSummary[]>> => {
     const response = await baseApi.get("/chat/list");
     return convertToMetadata(response);
   },
@@ -10,7 +12,7 @@ export const chatApi = {
     receiverId: string,
     page: number = 1,
     limit: number = 10
-  ) => {
+  ): Promise<ApiResponse<Message[]>> => {
     const response = await baseApi.get(
       `/chat/${receiverId}?page=${page}&limit=${limit}`
     );
