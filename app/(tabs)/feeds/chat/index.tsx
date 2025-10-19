@@ -42,7 +42,7 @@ export default function ChatListScreen() {
 
   const handleChatPress = (chat: ChatSummary) => {
     const fullName = chat.last_name ? `${chat.first_name} ${chat.last_name}` : chat.first_name;
-    router.push(`/(tabs)/chat/${chat.user_id}?userName=${encodeURIComponent(fullName)}` as any);
+    router.push(`/(tabs)/feeds/chat/${chat.user_id}?userName=${encodeURIComponent(fullName)}` as any);
   };
 
   const handleNewChat = () => {
@@ -168,7 +168,12 @@ export default function ChatListScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.tint }]}>
         <View style={styles.headerContent}>
-          <ThemedText type="title" style={styles.headerText}>Messages</ThemedText>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/feeds')} style={styles.backButton}>
+                      <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <ThemedText type="title" style={styles.headerText}>Messages</ThemedText>
+          </View>
           <TouchableOpacity onPress={handleNewChat} style={styles.newChatButton}>
             <Ionicons name="create-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -252,7 +257,11 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 5,  
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
   },
   headerContent: {
     flexDirection: 'row',
