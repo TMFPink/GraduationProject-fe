@@ -1,98 +1,353 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import Posts from '@/components/ui/post';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Post } from '@/src/types/post';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const { width } = Dimensions.get('window');
+const ANNOUNCEMENT_WIDTH = width * 0.8;
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const [newCollection, setNewCollection] = useState([
+    {
+      id: '1',
+      name: 'EcoSmart Lamp',
+      category: 'Lighting',
+      edition: 'Premium',
+      price: '$39.99',
+    },
+    {
+      id: '2',
+      name: 'Bamboo Speaker',
+      category: 'Audio',
+      edition: 'Classic',
+      price: '$59.99',
+    },
+    {
+      id: '3',
+      name: 'Solar Charger',
+      category: 'Accessories',
+      edition: 'Compact',
+      price: '$29.99',
+    },
+  ]);
+
+  const [newsItems, setNewsItems] = useState<Post[]>([
+    {
+      id: '1',
+      authorId: 'author-1',
+      authorName: 'Vitaluxe Official',
+      createdAt: 'Oct 15, 2025',
+      updatedAt: 'Oct 15, 2025',
+      content: 'We just launched our new eco-friendly enzyme cleaner! 🌱',
+      likesCount: 230,
+      commentsCount: 18,
+    },
+    {
+      id: '2',
+      authorId: 'author-2',
+      authorName: 'Homecare Daily',
+      createdAt: 'Oct 10, 2025',
+      updatedAt: 'Oct 10, 2025',
+      content:
+        'Learn why enzyme-based cleaning is revolutionizing the industry.',
+      likesCount: 180,
+      commentsCount: 22,
+    },
+  ]);
+
+  const announcements = [
+    {
+      id: '1',
+      title: 'Holiday Discount!',
+      description:
+        'Enjoy up to 30% off on all Vitaluxe products until November 30.',
+    },
+    {
+      id: '2',
+      title: 'New Store Opening',
+      description:
+        'We’re expanding! Visit our new flagship store in District 1.',
+    },
+    {
+      id: '3',
+      title: 'Join Our Eco Challenge',
+      description:
+        'Participate in our #CleanWithEnzyme challenge to win free gifts!',
+    },
+  ];
+
+  const flatListRef = useRef<FlatList>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % announcements.length;
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      setCurrentIndex(nextIndex);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [currentIndex]);
+
+  const renderProductItem = ({
+    item,
+  }: {
+    item: { id: string; name: string; category: string; edition: string; price: string };
+  }) => (
+    <View style={styles.productCard}>
+      <View style={styles.productImagePlaceholder}>
+        <MaterialCommunityIcons name="image" size={40} color="#ccc" />
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productCategory}>{item.category}</Text>
+        <Text style={styles.productEdition}>{item.edition}</Text>
+        <Text style={styles.productPrice}>{item.price}</Text>
+      </View>
+    </View>
+  );
+
+  const renderNewsItem = ({ item }: { item: Post }) => (
+    <View style={styles.postCard}>
+      <Text style={styles.postUsername}>{item.authorName}</Text>
+      <Text style={styles.postDate}>{item.createdAt}</Text>
+      <Text style={styles.postContent}>{item.content}</Text>
+      <View style={styles.postFooter}>
+        <Text style={styles.postStat}>❤️ {item.likesCount}</Text>
+        <Text style={styles.postStat}>💬 {item.commentsCount}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.background, { backgroundColor: colors.tint }]}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 🔵 Header Section */}
+        <View style={styles.headerWrapper}>
+          <View style={styles.headingRow}>
+            <Text style={styles.headingText}>Welcome</Text>
+            <Text style={styles.dateText}>!</Text>
+          </View>
+
+          {/* 🔔 Announcements Carousel */}
+          <View style={styles.announcementsContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={announcements}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.announcementCard}>
+                  <MaterialCommunityIcons
+                    name="bullhorn-outline"
+                    size={26}
+                    color={colors.tint}
+                  />
+                  <Text style={[styles.announcementTitle, { color: colors.tint }]}>
+                    ANNOUNCEMENT
+                  </Text>
+                  <Text style={styles.announcementSubtitle}>{item.title}</Text>
+                  <Text style={styles.announcementDescription}>
+                    {item.description}
+                  </Text>
+                </View>
+              )}
+            />
+          </View>
+        </View>
+
+        {/* ⚪ Main Content */}
+        <View style={styles.contentWrapper}>
+          {/* 🟢 New Collection */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>New Collection</Text>
+            <TouchableOpacity style={styles.viewButton}>
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={newCollection}
+            renderItem={renderProductItem}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+
+          {/* 📰 News Section */}
+          <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+            <Text style={styles.sectionTitle}>News</Text>
+            <TouchableOpacity style={styles.viewButton}>
+              <Text style={styles.viewButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={newsItems}
+            renderItem={({ item }) => (
+              <Posts
+                post={item}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  background: {
+    flex: 1,
+  },
+  headerWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 70,
+    paddingBottom: 40,
+  },
+  headingRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headingText: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    color: '#fff',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  dateText: {
+    backgroundColor: '#E9F3FF',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 10,
+    fontWeight: '600',
+    color: '#003366',
   },
+  announcementsContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  announcementCard: {
+    width: ANNOUNCEMENT_WIDTH,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+    marginHorizontal: (width - ANNOUNCEMENT_WIDTH) / 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  announcementTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 6,
+  },
+  announcementSubtitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  announcementDescription: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  contentWrapper: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  viewButton: {
+    backgroundColor: '#E9F3FF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  viewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#003366',
+  },
+  productCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  productImagePlaceholder: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#F0F4F8',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  productInfo: { flex: 1, justifyContent: 'center' },
+  productName: { fontSize: 16, fontWeight: 'bold', color: '#003366' },
+  productCategory: { fontSize: 14, color: '#666', marginTop: 4 },
+  productEdition: { fontSize: 14, color: '#666', marginTop: 2 },
+  productPrice: { fontSize: 16, fontWeight: '600', color: '#0A3981', marginTop: 6 },
+
+  // 📰 Post Styles
+  postCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  postUsername: { fontSize: 14, fontWeight: 'bold', color: '#0A3981' },
+  postDate: { fontSize: 12, color: '#777', marginBottom: 6 },
+  postContent: { fontSize: 14, color: '#333', marginBottom: 8 },
+  postFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  postStat: { fontSize: 13, color: '#555' },
 });
