@@ -141,8 +141,8 @@ export default function HomeScreen() {
         {/* 🔵 Header Section */}
         <View style={styles.headerWrapper}>
           <View style={styles.headingRow}>
-            <Text style={styles.headingText}>Graduation Project</Text>
-            <Text style={styles.dateText}>Welcome back!</Text>
+            <Text style={styles.headingText}>Welcome</Text>
+            <Text style={styles.dateText}>!</Text>
           </View>
 
           {/* 🔔 Announcements Carousel */}

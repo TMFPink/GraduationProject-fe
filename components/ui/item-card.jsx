@@ -1,19 +1,23 @@
-import { Card } from '@/src/types/card';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-const CardGridItem = ({ card }: { card: Card }) => {
+
+const CardGridItem = ({ card }) => {
   const { image, name, setName, rarity, number } = card;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      style={styles.cardContainer}
-    >
+    <TouchableOpacity activeOpacity={0.8} style={styles.cardContainer}>
       <View style={styles.imageContainer}>
-        <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+        {image ? (
+          <Image source={{ uri: image }} style={styles.image} resizeMode="cover" />
+        ) : (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No Image</Text>
+          </View>
+        )}
       </View>
-      <Text style={styles.cardTitle}>{name}</Text>
-      <Text style={styles.cardSubtitle}>{setName}</Text>
+
+      <Text style={styles.cardTitle} numberOfLines={1}>{name}</Text>
+      <Text style={styles.cardSubtitle} numberOfLines={1}>{setName}</Text>
       <Text style={styles.cardSubtitle}>{rarity}</Text>
       <Text style={styles.cardSubtitle}>{number}</Text>
     </TouchableOpacity>
@@ -42,10 +46,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 8,
+    backgroundColor: '#f2f2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
     height: '100%',
+  },
+  placeholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    color: '#999',
+    fontSize: 14,
   },
   cardTitle: {
     fontSize: 16,
