@@ -1,7 +1,6 @@
 import Posts from '@/components/ui/post';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Post } from '@/src/types/post';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -45,7 +44,7 @@ export default function HomeScreen() {
     },
   ]);
 
-  const [newsItems, setNewsItems] = useState<Post[]>([
+  const [newsItems, setNewsItems] = useState([
     {
       id: '1',
       authorId: 'author-1',
@@ -80,7 +79,7 @@ export default function HomeScreen() {
       id: '2',
       title: 'New Store Opening',
       description:
-        'We’re expanding! Visit our new flagship store in District 1.',
+        'Were expanding! Visit our new flagship store in District 1.',
     },
     {
       id: '3',
@@ -90,7 +89,7 @@ export default function HomeScreen() {
     },
   ];
 
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -102,11 +101,7 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [currentIndex]);
 
-  const renderProductItem = ({
-    item,
-  }: {
-    item: { id: string; name: string; category: string; edition: string; price: string };
-  }) => (
+  const renderProductItem = ({ item }) => (
     <View style={styles.productCard}>
       <View style={styles.productImagePlaceholder}>
         <MaterialCommunityIcons name="image" size={40} color="#ccc" />
@@ -120,7 +115,7 @@ export default function HomeScreen() {
     </View>
   );
 
-  const renderNewsItem = ({ item }: { item: Post }) => (
+  const renderNewsItem = ({ item }) => (
     <View style={styles.postCard}>
       <Text style={styles.postUsername}>{item.authorName}</Text>
       <Text style={styles.postDate}>{item.createdAt}</Text>

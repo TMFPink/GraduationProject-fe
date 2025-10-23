@@ -6,21 +6,54 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
+import Posts from "@/components/ui/post";
+import { SafeAreaView } from "react-native-safe-area-context";
+import BinderCard from "@/components/ui/item-binder";
 
-const { width } = Dimensions.get("window");
 const TABS = ["Posts", "Portfolio", "Collections"];
 
 const ProfileScreen = () => {
+  const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
 
+  const [userPosts] = useState([
+    {
+      id: "1",
+      authorId: "user-123",
+      authorName: "Username",
+      createdAt: "Oct 20, 2025",
+      content: "Just shared my latest project! Check it out 🎨",
+      likesCount: 145,
+      commentsCount: 23,
+    },
+    {
+      id: "2",
+      authorId: "user-123",
+      authorName: "Username",
+      createdAt: "Oct 18, 2025",
+      content: "Excited to announce my new collection is now live! 🚀",
+      likesCount: 289,
+      commentsCount: 41,
+    },
+    {
+      id: "3",
+      authorId: "user-123",
+      authorName: "Username",
+      createdAt: "Oct 15, 2025",
+      content: "Thanks for all the support! Hit level 36 today 🎉",
+      likesCount: 512,
+      commentsCount: 78,
+    },
+  ]);
+
   const handleTabPress = (index) => {
     setActiveTab(index);
-    scrollRef.current.scrollTo({ x: index * width, animated: true });
+    scrollRef.current?.scrollTo({ x: index * width, animated: true });
   };
 
   const handleScroll = Animated.event(
@@ -28,38 +61,91 @@ const ProfileScreen = () => {
     { useNativeDriver: false }
   );
 
+  const onMomentumScrollEnd = (event) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    setActiveTab(index);
+  };
+
+  const cardData = [
+    {
+      id: "1",
+      image: "https://images.ygoprodeck.com/images/cards/98596596.jpg",
+      name: "Red-Eyes Dark Dragoon",
+      setName: "MP22-EN249",
+      qty: 1,
+      price: "69.99",
+    },
+    {
+      id: "2",
+      image: "https://images.ygoprodeck.com/images/cards/89631139.jpg",
+      name: "Blue-Eyes White Dragon",
+      setName: "SDK-001",
+      qty: 2,
+      price: "49.99",
+    },
+    {
+      id: "3",
+      image: "https://images.ygoprodeck.com/images/cards/46986414.jpg",
+      name: "Dark Magician",
+      setName: "SDY-006",
+      qty: 3,
+      price: "39.99",
+    },
+    {
+      id: "4",
+      image: "https://images.ygoprodeck.com/images/cards/38033121.jpg",
+      name: "Dark Magician Girl",
+      setName: "MFC-000",
+      qty: 1,
+      price: "89.99",
+    },
+    {
+      id: "5",
+      image: "https://images.ygoprodeck.com/images/cards/44508094.jpg",
+      name: "Red Dragon Archfiend",
+      setName: "TDGS-EN040",
+      qty: 1,
+      price: "59.99",
+    },
+  ];
+
   return (
-    <View style={styles.container}>
-      {/* Cover */}
-      <View style={styles.coverContainer}>
-        <Image
-          source={{
-            uri: "https://images.unsplash.com/photo-1503264116251-35a269479413",
-          }}
-          style={styles.coverImage}
-        />
-        <TouchableOpacity style={[styles.editButton, {
-          position: 'absolute',
-          right: 16,
-          bottom: 16,
-          backgroundColor: 'white'
-        }]}>
-          <Text style={styles.editText}>Edit Info</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Cover */}
+        <View style={styles.coverContainer}>
+          <Image
+            source={{
+              uri: "https://images.unsplash.com/photo-1503264116251-35a269479413",
+            }}
+            style={styles.coverImage}
+          />
+          <TouchableOpacity
+            style={[
+              styles.editButton,
+              {
+                position: "absolute",
+                right: 16,
+                bottom: 16,
+                backgroundColor: "white",
+              },
+            ]}
+          >
+            <Text style={styles.editText}>Edit Info</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Profile Info Row */}
-      <View style={styles.profileRow}>
-        <Image
-          source={{
-            uri: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e",
-          }}
-          style={styles.avatar}
-        />
+        {/* Profile Row */}
+        <View style={styles.profileRow}>
+          <Image
+            source={{
+              uri: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e",
+            }}
+            style={styles.avatar}
+          />
+        </View>
 
-
-      </View>
-      <View>
+        {/* Info */}
         <View style={styles.infoContainer}>
           <View style={styles.nameRow}>
             <Text style={styles.username}>Username</Text>
@@ -81,75 +167,119 @@ const ProfileScreen = () => {
             </Text>
           </View>
         </View>
-      </View>
 
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        {TABS.map((tab, index) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => handleTabPress(index)}
-            style={styles.tabButton}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === index && styles.tabTextActive,
-              ]}
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          {TABS.map((tab, index) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => handleTabPress(index)}
+              style={styles.tabButton}
             >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-        <Animated.View
-          style={[
-            styles.tabIndicator,
-            {
-              transform: [
-                {
-                  translateX: scrollX.interpolate({
-                    inputRange: [0, width, width * 2],
-                    outputRange: [0, width / 3, (width / 3) * 2],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-      </View>
-
-      {/* Tab Content */}
-      <Animated.ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / width);
-          setActiveTab(index);
-        }}
-        scrollEventThrottle={16}
-      >
-        {/* Posts */}
-        <View style={styles.tabPage}>
-          <Text style={styles.tabHeader}>Posts</Text>
-          <Text style={styles.tabContent}>User’s posts appear here.</Text>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === index && styles.tabTextActive,
+                ]}
+              >
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <Animated.View
+            style={[
+              styles.tabIndicator,
+              {
+                transform: [
+                  {
+                    translateX: scrollX.interpolate({
+                      inputRange: [0, width * (TABS.length - 1)],
+                      outputRange: [0, (width / 3) * (TABS.length - 1)],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
         </View>
 
-        {/* Portfolio */}
-        <View style={styles.tabPage}>
-          <Text style={styles.tabHeader}>Portfolio</Text>
-          <Text style={styles.tabContent}>Showcase your main items.</Text>
-        </View>
+        {/* Tab Content */}
+        <Animated.ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+          scrollEventThrottle={16}
+        >
+          {/* Posts */}
+          <View style={{ width }}>
+            {userPosts.map((post) => (
+              <Posts key={post.id} post={post} />
+            ))}
+          </View>
 
-        {/* Collections */}
-        <View style={styles.tabPage}>
-          <Text style={styles.tabHeader}>Collections</Text>
-          <Text style={styles.tabContent}>Display your card sets here.</Text>
-        </View>
-      </Animated.ScrollView>
-    </View>
+          {/* Portfolio */}
+          <View style={[styles.tabPage, { width }]}>
+            {/* Featured Product */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
+              }}
+            >
+              <Text style={styles.tabHeader}>Featured Product</Text>
+              <TouchableOpacity style={styles.editButton}>
+                <Text style={styles.editText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.deckContainer, styles.smallDeckContainer]}>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.deckGrid}></View>
+              </ScrollView>
+            </View>
+
+            {/* Main Portfolio */}
+            <Text style={styles.tabHeader}>Main Portfolio</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {cardData.map((item) => (
+                <View key={item.id}>
+                  <BinderCard
+                    image={item.image}
+                    name={item.name}
+                    setName={item.setName}
+                    qty={item.qty}
+                    price={item.price}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Collections */}
+          <View style={[styles.tabPage, { width }]}>
+            <Text style={styles.tabHeader}>Collections</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {cardData.map((item) => (
+                <View key={item.id}>
+                  <BinderCard
+                    image={item.image}
+                    name={item.name}
+                    setName={item.setName}
+                    qty={item.qty}
+                    price={item.price}
+                  />
+                </View>
+              ))}
+            </View>          
+          </View>
+        </Animated.ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -157,7 +287,7 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  coverContainer: { width: "100%", height: 120, backgroundColor: "#d95c47" },
+  coverContainer: { width: "100%", height: 120 },
   coverImage: { width: "100%", height: "100%", resizeMode: "cover" },
   profileRow: {
     flexDirection: "row",
@@ -175,6 +305,8 @@ const styles = StyleSheet.create({
   infoContainer: {
     flex: 1,
     marginLeft: 12,
+    paddingHorizontal: 16,
+    marginBottom: 50,
   },
   nameRow: {
     flexDirection: "row",
@@ -222,13 +354,25 @@ const styles = StyleSheet.create({
   tabIndicator: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    width: width / 3,
     height: 3,
     backgroundColor: "#000",
     borderRadius: 2,
   },
-  tabPage: { width, padding: 16 },
-  tabHeader: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
+  tabPage: {
+    padding: 16,
+  },
+  tabHeader: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
   tabContent: { fontSize: 15, color: "#555" },
+
+  deckContainer: {
+    height: 500,
+    backgroundColor: "white",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    padding: 8,
+  },
+  smallDeckContainer: {
+    height: 200,
+  },
 });

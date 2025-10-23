@@ -1,8 +1,8 @@
-import { Post } from '@/src/types/post';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-const Posts = ({ post }: { post: Post }) => {
+
+const Posts = ({ post }) => {
   return (
     <View style={styles.newsCard}>
       {/* Header */}
