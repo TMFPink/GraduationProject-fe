@@ -11,17 +11,18 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
-          borderTopColor: Colors[colorScheme ?? 'light'].tint,
-          borderTopWidth: 1,
-        },
-      }}>
+<Tabs
+        screenOptions={{
+          tabBarStyle: {
+            height: 60,
+            position: 'fixed',
+            backgroundColor: '#E38E49',
+            borderTopWidth: 0,
+          },
+          tabBarActiveTintColor: '#0A3981',
+          tabBarInactiveTintColor: '#ffffffff',
+        }}
+      >
         <Tabs.Screen
         name="feeds"
         options={{
@@ -39,9 +40,18 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="searchs/searchs"
+        options={{
+          title: 'Search',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="rectangle.stack.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+
         name="index"
         options={{
           title: 'Home',
+          headerShown: false,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
@@ -57,6 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          headerShown: false,
           title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}

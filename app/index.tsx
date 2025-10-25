@@ -10,9 +10,9 @@ export default function Index() {
   useEffect(() => {
     if (!loading) {
       if (isLoggedIn) {
-        router.replace('/(tabs)');
+        router.navigate('/(tabs)');
       } else {
-        router.replace('/login');
+        router.navigate('/login');
       }
     }
   }, [isLoggedIn, loading, router]);
