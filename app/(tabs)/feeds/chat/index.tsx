@@ -38,7 +38,7 @@ export default function ChatListScreen() {
     chat.first_name.toLowerCase().includes(searchText.toLowerCase()) ||
     chat.last_message.toLowerCase().includes(searchText.toLowerCase())
   );
-  
+
 
   const handleChatPress = (chat: ChatSummary) => {
     const fullName = chat.last_name ? `${chat.first_name} ${chat.last_name}` : chat.first_name;

@@ -1,15 +1,15 @@
-// ========= This is sample interface ========= //
-export interface Card {
-  id: string;
-  name: string;
-  setName: string;
-  rarity: string;
-  number: number;
-  image: string;
-}
+// // ========= This is sample interface ========= //
+// export interface Card {
+//   id: string;
+//   name: string;
+//   setName: string;
+//   rarity: string;
+//   number: number;
+//   image: string;
+// }
 
 // ========= This is real interface ========= //
-export interface CardReal {
+export interface Card {
   card_id: string;
   name: string;
   rarity: string;

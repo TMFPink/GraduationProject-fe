@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import CardGridItem from '../../../components/ui/cardGridItem';
+import BinderCard from '@/components/ui/item-binder';
 // import newCollectionData from '../../../assets/data/newCollection.json';
 
 const Search = () => {
@@ -21,6 +21,48 @@ const Search = () => {
 //     setFilteredCards(newCollectionData);
 //   }, []);
 
+  const cardData = [
+    {
+      id: "1",
+      image: "https://images.ygoprodeck.com/images/cards/98596596.jpg",
+      name: "Red-Eyes Dark Dragoon",
+      setName: "MP22-EN249",
+      qty: 1,
+      price: "69.99",
+    },
+    {
+      id: "2",
+      image: "https://images.ygoprodeck.com/images/cards/89631139.jpg",
+      name: "Blue-Eyes White Dragon",
+      setName: "SDK-001",
+      qty: 2,
+      price: "49.99",
+    },
+    {
+      id: "3",
+      image: "https://images.ygoprodeck.com/images/cards/46986414.jpg",
+      name: "Dark Magician",
+      setName: "SDY-006",
+      qty: 3,
+      price: "39.99",
+    },
+    {
+      id: "4",
+      image: "https://images.ygoprodeck.com/images/cards/38033121.jpg",
+      name: "Dark Magician Girl",
+      setName: "MFC-000",
+      qty: 1,
+      price: "89.99",
+    },
+    {
+      id: "5",
+      image: "https://images.ygoprodeck.com/images/cards/44508094.jpg",
+      name: "Red Dragon Archfiend",
+      setName: "TDGS-EN040",
+      qty: 1,
+      price: "59.99",
+    },
+  ];
   const handleSearch = (text) => {
     setSearchText(text);
     if (text.trim() === '') {
@@ -50,15 +92,14 @@ const Search = () => {
       </View>
 
       <FlatList
-        data={filteredCards}
+        data={cardData}
         renderItem={({ item }) => (
-          <CardGridItem
+          <BinderCard
             image={item.image}
             name={item.name}
-            setName={item.category}
-            rarity={item.edition}
-            number={item.price}
-            onPress={() => console.log('Tapped:', item.name)}
+            setName={item.setName}
+            qty={item.qty}
+            price={item.price}
           />
         )}
         keyExtractor={(item) => item.id.toString()}

@@ -3,12 +3,16 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import  * as auth from '@/src/utils/auth';
+
 import {
   Dimensions,
   FlatList,
   ScrollView,
   StyleSheet,
   Text,
+  Touchable,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +23,11 @@ const ANNOUNCEMENT_WIDTH = width * 0.8;
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  const logOut = () => { 
+    auth.logout();
+    router.navigate('login');
+  };
 
   const [newCollection, setNewCollection] = useState([
     {
@@ -137,7 +146,9 @@ export default function HomeScreen() {
         <View style={styles.headerWrapper}>
           <View style={styles.headingRow}>
             <Text style={styles.headingText}>Welcome</Text>
-            <Text style={styles.dateText}>!</Text>
+            <TouchableOpacity style={styles.dateText} onPress={logOut}>
+                          <Text>Bached</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 🔔 Announcements Carousel */}

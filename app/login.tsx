@@ -29,60 +29,60 @@ export default function LoginScreen() {
   const { initializeSocket } = useSocket();
 
 
-  const handleLogin = async () => {
-    router.navigate('/(tabs)');
-  }
   // const handleLogin = async () => {
-  //   if (!formData.email || !formData.password) {
-  //     Alert.alert('Error', 'Please fill in all fields');
-  //     return;
-  //   }
+  //   router.navigate('/(tabs)');
+  // }
+  const handleLogin = async () => {
+    if (!formData.email || !formData.password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
 
-  //   if (!isValidEmail(formData.email)) {
-  //     Alert.alert('Error', 'Please enter a valid email address');
-  //     return;
-  //   }
+    if (!isValidEmail(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
 
-  //   setLoading(true);
+    setLoading(true);
 
-  //   try {
-  //     const responseToken = await authApi.login(formData.email, formData.password);
+    try {
+      const responseToken = await authApi.login(formData.email, formData.password);
       
-  //     if (!responseToken || !responseToken.metadata) {
-  //       throw new Error('Invalid response from server');
-  //     }
+      if (!responseToken || !responseToken.metadata) {
+        throw new Error('Invalid response from server');
+      }
 
-  //     // Store token
-  //     await setToken(responseToken.metadata.accessToken);
+      // Store token
+      await setToken(responseToken.metadata.accessToken);
       
-  //     // Get and store user data
-  //     const userData = await authApi.getCurrentUser();
-  //     await setUserData(userData.metadata);
+      // Get and store user data
+      const userData = await authApi.getCurrentUser();
+      await setUserData(userData.metadata);
       
-  //     // Update auth context
-  //     console.log('Login response token:', responseToken);
-  //     setAuthData(responseToken.metadata.accessToken);
-  //     setCurrentUser(userData.metadata);
+      // Update auth context
+      console.log('Login response token:', responseToken);
+      setAuthData(responseToken.metadata.accessToken);
+      setCurrentUser(userData.metadata);
 
-  //     // Navigate to main app
-  //     await initializeSocket();
-  //     router.replace('/(tabs)');
-  //   } catch (error: any) {
-  //     console.error('Login failed:', error);
+      // Navigate to main app
+      await initializeSocket();
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Login failed:', error);
       
-  //     let errorMessage = 'Login failed. Please try again.';
+      let errorMessage = 'Login failed. Please try again.';
       
-  //     if (error.response?.data?.message) {
-  //       errorMessage = error.response.data.message;
-  //     } else if (error.message) {
-  //       errorMessage = error.message;
-  //     }
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       
-  //     Alert.alert('Login Failed', errorMessage);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      Alert.alert('Login Failed', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

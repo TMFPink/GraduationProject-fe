@@ -1,102 +1,337 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Image,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import DeckCardItem from '@/components/ui/item-deck-card';
-// Card component for the card pool
+import { useFocusEffect } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
+import { deckApi } from '@/src/api/deck-api';
+import { cardApi } from '@/src/api/card-api';
+
+/* --------------------------------------------------------------
+   CardPoolItem – tiny reusable component for the card pool
+   -------------------------------------------------------------- */
 const CardPoolItem = ({ card, onAdd }) => (
   <TouchableOpacity style={styles.cardPoolItem} onPress={() => onAdd(card)}>
     <View style={styles.cardImageContainer}>
-      <View style={styles.cardImagePlaceholder}>
-        <Text style={styles.cardImageText}>IMG</Text>
-      </View>
+      {card.image_normal_url ? (
+        <Image
+          source={{ uri: card.image_normal_url }}
+          style={styles.cardImagePlaceholder}
+          resizeMode="contain"
+        />
+      ) : (
+        <View style={styles.cardImagePlaceholder}>
+          <Text style={styles.cardImageText}>No Image</Text>
+        </View>
+      )}
     </View>
-    <Text style={styles.cardPoolName} numberOfLines={1}>{card.name}</Text>
   </TouchableOpacity>
 );
 
+/* --------------------------------------------------------------
+   Main component
+   -------------------------------------------------------------- */
 const DeckDetailPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [deckName, setDeckName] = useState('');
-  const [selectedFormat, setSelectedFormat] = useState('advanced');
-  const [filterType, setFilterType] = useState('main'); // main, extra, spell, trap, etc.
-  
-  // Mock card pool data
-  const [cardPool] = useState([
-    { id: 1, name: 'Dark Magician', type: 'monster' },
-    { id: 2, name: 'Blue-Eyes White Dragon', type: 'monster' },
-    { id: 3, name: 'Pot of Greed', type: 'spell' },
-    { id: 4, name: 'Mirror Force', type: 'trap' },
-    { id: 5, name: 'Monster Reborn', type: 'spell' },
-    { id: 6, name: 'Raigeki', type: 'spell' },
-    { id: 7, name: 'Solemn Judgment', type: 'trap' },
-    { id: 8, name: 'Ash Blossom', type: 'monster' },
-    { id: 9, name: 'Dark Magician', type: 'monster' },
-    { id: 10, name: 'Blue-Eyes White Dragon', type: 'monster' },
-    { id: 11, name: 'Pot of Greed', type: 'spell' },
-    { id: 12, name: 'Mirror Force', type: 'trap' },
-    { id: 13, name: 'Monster Reborn', type: 'spell' },
-    { id: 14, name: 'Raigeki', type: 'spell' },
-    { id: 15, name: 'Solemn Judgment', type: 'trap' },
-    { id: 16, name: 'Ash Blossom', type: 'monster' },
-  ]);
+  const { deckId } = useLocalSearchParams();
 
-  // Deck state
+  /* ---------- Deck meta ---------- */
+  const [deckName, setDeckName] = useState('New Deck');
+  const [selectedFormat, setSelectedFormat] = useState('OCG');
+  const [cardDomainId, setCardDomainId] = useState(
+    '11111111-1111-1111-1111-111111111111'
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDeck, setIsLoadingDeck] = useState(true);
+
+  /* ---------- Deck cards ---------- */
   const [mainDeck, setMainDeck] = useState({});
   const [extraDeck, setExtraDeck] = useState({});
   const [sideDeck, setSideDeck] = useState({});
 
-  // Calculate deck counts
-  const getMainDeckCount = () => Object.values(mainDeck).reduce((sum, count) => sum + count, 0);
-  const getExtraDeckCount = () => Object.values(extraDeck).reduce((sum, count) => sum + count, 0);
-  const getSideDeckCount = () => Object.values(sideDeck).reduce((sum, count) => sum + count, 0);
+  /* ---------- Card pool ---------- */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cardPool, setCardPool] = useState([]);
+  const [filterType, setFilterType] = useState('main');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreCards, setHasMoreCards] = useState(true);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchTimer, setSearchTimer] = useState(null);
 
-  // Add card to deck
-  const addToDeck = (card, deckType) => {
-    const setDeck = deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
-    const deck = deckType === 'main' ? mainDeck : deckType === 'extra' ? extraDeck : sideDeck;
-    
-    setDeck(prev => ({
+  
+  const CARDS_PER_PAGE = 20;
+
+  /* --------------------------------------------------------------
+     Load the deck (metadata + cards)
+     -------------------------------------------------------------- */
+  const loadDeckData = async () => {
+    if (!deckId) {
+      setIsLoadingDeck(false);
+      return;
+    }
+
+    try {
+      setIsLoadingDeck(true);
+      const { metadata } = await deckApi.getDeckById(deckId);
+
+      if (metadata?.deck) {
+        const { name, format, card_domain_id, cards } = metadata.deck;
+        setDeckName(name ?? 'New Deck');
+        setSelectedFormat(format ?? 'OCG');
+        setCardDomainId(card_domain_id ?? cardDomainId);
+
+        if (cards?.length) await loadDeckCards(cards);
+        else setIsLoadingDeck(false);
+      } else {
+        setIsLoadingDeck(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to load deck.');
+      setIsLoadingDeck(false);
+    }
+  };
+
+  const loadDeckCards = async (deckCards) => {
+    try {
+      const responses = await Promise.all(
+        deckCards.map((dc) =>
+          cardApi.getCardById(dc.card_id).catch(() => null)
+        )
+      );
+
+      const newMain = {};
+      const newExtra = {};
+
+      responses.forEach((res, i) => {
+        if (!res || res.statusCode !== 200) return;
+        const card = res.metadata;
+        if (!card?.card_id) return;
+
+        const entry = { card, quantity: deckCards[i].quantity };
+        isExtraDeckMonster(card)
+          ? (newExtra[card.card_id] = entry)
+          : (newMain[card.card_id] = entry);
+      });
+
+      setMainDeck(newMain);
+      setExtraDeck(newExtra);
+      setSideDeck({});
+      setIsLoadingDeck(false);
+    } catch {
+      setIsLoadingDeck(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDeckData();
+  }, [deckId]);
+
+
+  //extra
+  
+  /* --------------------------------------------------------------
+     Card pool – pagination & search
+     -------------------------------------------------------------- */
+  const loadCardPool = async (page = 1, append = false, query = '') => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+
+    try {
+      const response = await cardApi.getMetadataCard(
+        query ? 1000 : CARDS_PER_PAGE,
+        page,
+        query
+      );
+
+      if (response.statusCode === 200 && response.metadata?.cards) {
+        const cards = response.metadata.cards;
+        setHasMoreCards(!query && cards.length === CARDS_PER_PAGE);
+
+        if (append) setCardPool((prev) => [...prev, ...cards]);
+        else setCardPool(cards);
+      } else {
+        setCardPool([]);
+      }
+    } catch {
+      setCardPool([]);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  const performSearch = (text) => {
+    const trimmed = text.trim();
+    setIsSearchMode(!!trimmed);
+    setCurrentPage(1);
+    setHasMoreCards(!trimmed);
+    loadCardPool(1, false, trimmed);
+  };
+
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+    if (searchTimer) clearTimeout(searchTimer);
+    const timer = setTimeout(() => performSearch(text), 400);
+    setSearchTimer(timer);
+  };
+
+  const loadMore = () => {
+    if (!isLoadingMore && hasMoreCards && !isSearchMode) {
+      const next = currentPage + 1;
+      setCurrentPage(next);
+      loadCardPool(next, true);
+    }
+  };
+
+  const handleScroll = ({ nativeEvent }) => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    const nearBottom =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - 30;
+
+    if (nearBottom && !isSearchMode) loadMore();
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentPage(1);
+      setHasMoreCards(true);
+      setIsSearchMode(false);
+      setSearchQuery('');
+      loadCardPool(1, false);
+    }, [])
+  );
+
+  useEffect(() => {
+    loadCardPool(1, false);
+  }, []);
+
+  /* --------------------------------------------------------------
+     Save deck
+     -------------------------------------------------------------- */
+  const handleSaveDeck = async () => {
+    if (!deckId) {
+      Alert.alert('Error', 'No deck ID.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const cards = [...Object.values(mainDeck), ...Object.values(extraDeck), ...Object.values(sideDeck)].map(
+        (e) => ({
+          card_id: e.card.card_id,
+          quantity: e.quantity,
+        })
+      );
+
+      await deckApi.updateDeck(deckId, {
+        name: deckName,
+        format: selectedFormat,
+        card_domain_id: cardDomainId,
+        cards,
+      });
+
+      Alert.alert('Success', 'Deck saved!');
+    } catch {
+      Alert.alert('Error', 'Failed to save deck.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  /* --------------------------------------------------------------
+     Helpers
+     -------------------------------------------------------------- */
+  const deckCounts = {
+    main: Object.values(mainDeck).reduce((s, e) => s + e.quantity, 0),
+    extra: Object.values(extraDeck).reduce((s, e) => s + e.quantity, 0),
+    side: Object.values(sideDeck).reduce((s, e) => s + e.quantity, 0),
+  };
+
+  const isExtraDeckMonster = (card) => {
+    const type = card.type || card.meta_data?.type;
+    if (!type) return false;
+    return ['Fusion Monster', 'Synchro Monster', 'XYZ Monster', 'Link Monster'].some((t) =>
+      type.includes(t)
+    );
+  };
+
+  const addToDeck = (card, type) => {
+    const target =
+      type === 'main' ? (isExtraDeckMonster(card) ? 'extra' : 'main') : type;
+    const setter =
+      target === 'main'
+        ? setMainDeck
+        : target === 'extra'
+        ? setExtraDeck
+        : setSideDeck;
+
+    setter((prev) => ({
       ...prev,
-      [card.id]: Math.min((prev[card.id] || 0) + 1, 3)
+      [card.card_id]: {
+        card,
+        quantity: Math.min((prev[card.card_id]?.quantity || 0) + 1, 3),
+      },
     }));
   };
 
-  // Remove card from deck
-  const removeFromDeck = (card, deckType) => {
-    const setDeck = deckType === 'main' ? setMainDeck : deckType === 'extra' ? setExtraDeck : setSideDeck;
-    
-    setDeck(prev => {
-      const newCount = (prev[card.id] || 0) - 1;
-      if (newCount <= 0) {
-        const { [card.id]: _, ...rest } = prev;
+  const removeFromDeck = (card, type) => {
+    const setter =
+      type === 'main'
+        ? setMainDeck
+        : type === 'extra'
+        ? setExtraDeck
+        : setSideDeck;
+
+    setter((prev) => {
+      const cur = prev[card.card_id];
+      if (!cur) return prev;
+      if (cur.quantity <= 1) {
+        const { [card.card_id]: _, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [card.id]: newCount };
+      return {
+        ...prev,
+        [card.card_id]: { ...cur, quantity: cur.quantity - 1 },
+      };
     });
   };
 
-  // Get cards in deck with counts
-  const getDeckCards = (deck) => {
-    return Object.entries(deck).map(([cardId, count]) => ({
-      card: cardPool.find(c => c.id === parseInt(cardId)),
-      count
-    })).filter(item => item.card);
-  };
+  const getDeckCards = (deck) =>
+    Object.values(deck).map((e) => ({ card: e.card, count: e.quantity }));
 
-  const handleBack = () => {
-    router.navigate('/decks/deckList');
-  };
+  const goBack = () => router.navigate('/decks/deckList');
+
+  /* --------------------------------------------------------------
+     Render
+     -------------------------------------------------------------- */
+  if (isLoadingDeck) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={styles.loadingText}>Loading deck…</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        {/* Back Button */}
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backText}>{'< Deck'}</Text>
+        {/* Back */}
+        <TouchableOpacity onPress={goBack} style={styles.backButton}>
+          <Text style={styles.backText}>&lt; Deck</Text>
         </TouchableOpacity>
 
-        {/* Deck Name Input */}
+        {/* Name + counts */}
         <View style={styles.deckHeaderSection}>
           <TextInput
             style={styles.deckNameInput}
@@ -106,13 +341,19 @@ const DeckDetailPage = () => {
             placeholderTextColor="#999"
           />
           <View style={styles.deckCountsRow}>
-            <Text style={styles.deckCountText}>Main: {getMainDeckCount()}/40-60</Text>
-            <Text style={styles.deckCountText}>Extra: {getExtraDeckCount()}/15</Text>
-            <Text style={styles.deckCountText}>Side: {getSideDeckCount()}/15</Text>
+            <Text style={styles.deckCountText}>
+              Main: {deckCounts.main}/40-60
+            </Text>
+            <Text style={styles.deckCountText}>
+              Extra: {deckCounts.extra}/15
+            </Text>
+            <Text style={styles.deckCountText}>
+              Side: {deckCounts.side}/15
+            </Text>
           </View>
         </View>
 
-        {/* Action Buttons */}
+        {/* Action buttons */}
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionButtonText}>Import File</Text>
@@ -122,25 +363,44 @@ const DeckDetailPage = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save Deck</Text>
+        {/* Save */}
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSaveDeck}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Saving…' : 'Save Deck'}
+          </Text>
         </TouchableOpacity>
 
-        {/* Search Bar */}
+        {/* Search */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <TextInput
               style={styles.searchInput}
-              placeholder="Search cards..."
+              placeholder="Search cards…"
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={handleSearchChange}
               placeholderTextColor="#999"
             />
+            {searchQuery ? (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => handleSearchChange('')}
+              >
+                <Text style={styles.clearButtonText}>X</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
+          {isSearchMode && (
+            <Text style={styles.searchModeText}>
+              {cardPool.length} result{cardPool.length !== 1 ? 's' : ''} found
+            </Text>
+          )}
         </View>
 
-        {/* Format and Filter Controls */}
+        {/* Filters */}
         <View style={styles.controlsRow}>
           <View style={styles.formatPickerContainer}>
             <Text style={styles.controlLabel}>Format:</Text>
@@ -149,14 +409,14 @@ const DeckDetailPage = () => {
                 selectedValue={selectedFormat}
                 onValueChange={setSelectedFormat}
                 style={styles.picker}
-                itemStyle={styles.pickerItem}
               >
-                <Picker.Item label="Advanced" value="advanced" />
-                <Picker.Item label="Traditional" value="traditional" />
-                <Picker.Item label="Speed Duel" value="speed" />
+                <Picker.Item label="OCG" value="OCG" />
+                <Picker.Item label="TCG" value="TCG" />
+                <Picker.Item label="Genesys" value="Genesys" />
               </Picker>
             </View>
           </View>
+
           <View style={styles.filterContainer}>
             <Text style={styles.controlLabel}>Deck Target:</Text>
             <View style={styles.pickerWrapper}>
@@ -164,53 +424,72 @@ const DeckDetailPage = () => {
                 selectedValue={filterType}
                 onValueChange={setFilterType}
                 style={styles.picker}
-                itemStyle={styles.pickerItem}
               >
                 <Picker.Item label="Main Deck" value="main" />
-                <Picker.Item label="Extra Deck" value="extra" />
                 <Picker.Item label="Side Deck" value="side" />
               </Picker>
             </View>
           </View>
         </View>
 
- {/* Card Pool Section */}
+        {/* Card Pool */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Card Pool</Text>
           <View style={styles.cardPoolScroll}>
-            <ScrollView 
+            <ScrollView
               showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
+              nestedScrollEnabled
+              onScroll={handleScroll}
+              scrollEventThrottle={400}
             >
               <View style={styles.cardPoolGrid}>
                 {cardPool.map((card) => (
-                  <CardPoolItem 
-                    key={card.id} 
-                    card={card} 
-                    onAdd={(card) => addToDeck(card, filterType)}
+                  <CardPoolItem
+                    key={card.card_id}
+                    card={card}
+                    onAdd={(c) => addToDeck(c, filterType)}
                   />
                 ))}
               </View>
+
+              {isLoadingMore && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#2196F3" />
+                  <Text style={styles.loadingText}>
+                    {isSearchMode ? 'Searching…' : 'Loading more…'}
+                  </Text>
+                </View>
+              )}
+
+              {!hasMoreCards && cardPool.length > 0 && !isSearchMode && (
+                <Text style={styles.endOfListText}>No more cards</Text>
+              )}
+
+              {cardPool.length === 0 && searchQuery && !isLoadingMore && (
+                <Text style={styles.noResultsText}>
+                  No cards found for "{searchQuery}"
+                </Text>
+              )}
             </ScrollView>
           </View>
         </View>
 
-        {/* Main Deck Section */}
+        {/* Main Deck */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Main Deck</Text>
-            <Text style={styles.sectionCount}>{getMainDeckCount()} cards</Text>
+            <Text style={styles.sectionCount}>{deckCounts.main} cards</Text>
           </View>
           <View style={styles.deckContainer}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.deckGrid}>
                 {getDeckCards(mainDeck).map(({ card, count }) => (
                   <DeckCardItem
-                    key={card.id}
+                    key={card.card_id}
                     card={card}
                     count={count}
-                    onAdd={(card) => addToDeck(card, 'main')}
-                    onRemove={(card) => removeFromDeck(card, 'main')}
+                    onAdd={() => addToDeck(card, 'main')}
+                    onRemove={() => removeFromDeck(card, 'main')}
                   />
                 ))}
               </View>
@@ -218,22 +497,24 @@ const DeckDetailPage = () => {
           </View>
         </View>
 
-        {/* Extra Deck Section */}
+        {/* Extra Deck */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Extra Deck</Text>
-            <Text style={styles.sectionCount}>{getExtraDeckCount()}/15 cards</Text>
+            <Text style={styles.sectionCount}>
+              {deckCounts.extra}/15 cards
+            </Text>
           </View>
           <View style={[styles.deckContainer, styles.smallDeckContainer]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.deckGrid}>
                 {getDeckCards(extraDeck).map(({ card, count }) => (
                   <DeckCardItem
-                    key={card.id}
+                    key={card.card_id}
                     card={card}
                     count={count}
-                    onAdd={(card) => addToDeck(card, 'extra')}
-                    onRemove={(card) => removeFromDeck(card, 'extra')}
+                    onAdd={() => addToDeck(card, 'extra')}
+                    onRemove={() => removeFromDeck(card, 'extra')}
                   />
                 ))}
               </View>
@@ -241,22 +522,24 @@ const DeckDetailPage = () => {
           </View>
         </View>
 
-        {/* Side Deck Section */}
+        {/* Side Deck */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Side Deck</Text>
-            <Text style={styles.sectionCount}>{getSideDeckCount()}/15 cards</Text>
+            <Text style={styles.sectionCount}>
+              {deckCounts.side}/15 cards
+            </Text>
           </View>
           <View style={[styles.deckContainer, styles.smallDeckContainer]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.deckGrid}>
                 {getDeckCards(sideDeck).map(({ card, count }) => (
                   <DeckCardItem
-                    key={card.id}
+                    key={card.card_id}
                     card={card}
                     count={count}
-                    onAdd={(card) => addToDeck(card, 'side')}
-                    onRemove={(card) => removeFromDeck(card, 'side')}
+                    onAdd={() => addToDeck(card, 'side')}
+                    onRemove={() => removeFromDeck(card, 'side')}
                   />
                 ))}
               </View>
@@ -268,29 +551,20 @@ const DeckDetailPage = () => {
   );
 };
 
+/* --------------------------------------------------------------
+   Styles
+   -------------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    marginBottom: 70,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
-    padding: 20,
-  },
-  backButton: {
-    marginBottom: 20,
-    paddingVertical: 5,
-  },
-  backText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  deckHeaderSection: {
-    marginBottom: 16,
-  },
+  container: { flex: 1, marginBottom: 70, backgroundColor: '#f5f5f5' },
+  content: { padding: 20 },
+  center: { justifyContent: 'center', alignItems: 'center' },
+
+  /* Header */
+  backButton: { marginBottom: 20, paddingVertical: 5 },
+  backText: { fontSize: 18, fontWeight: '600', color: '#1a1a1a' },
+  deckHeaderSection: { marginBottom: 16 },
   deckNameInput: {
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -306,11 +580,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: 8,
   },
-  deckCountText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
+  deckCountText: { fontSize: 13, color: '#666', fontWeight: '500' },
+
+  /* Action buttons */
   actionButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -319,18 +591,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     paddingVertical: 12,
     alignItems: 'center',
   },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
+  actionButtonText: { fontSize: 14, fontWeight: '600', color: '#333' },
+
+  /* Save */
   saveButton: {
     backgroundColor: '#4CAF50',
     borderRadius: 8,
@@ -338,96 +608,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-  },
-  searchRow: {
-    marginBottom: 16,
-  },
+  saveButtonDisabled: { backgroundColor: '#9E9E9E' },
+  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+
+  /* Search */
+  searchRow: { marginBottom: 16 },
   searchContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchInput: {
+    flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: '#1a1a1a',
   },
+  clearButton: { paddingHorizontal: 12, paddingVertical: 12 },
+  clearButtonText: { fontSize: 18, color: '#999', fontWeight: '600' },
+  searchModeText: { fontSize: 12, color: '#2196F3', marginTop: 4 },
+
+  /* Controls */
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
     gap: 10,
   },
-  formatPickerContainer: {
-    flex: 1,
-  },
-  filterContainer: {
-    flex: 1,
-  },
-  controlLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 6,
-    fontWeight: '500',
-  },
+  formatPickerContainer: { flex: 1 },
+  filterContainer: { flex: 1 },
+  controlLabel: { fontSize: 12, color: '#666', marginBottom: 6 },
   pickerWrapper: {
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     overflow: 'hidden',
-    justifyContent: 'center',
   },
-  picker: {
-    width: '100%',
-  },
-  pickerItem: {
-    fontSize: 14,
-    height: 44,
-  },
-  filterButton: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  section: {
-    marginBottom: 24,
-  },
+  picker: { width: '100%' },
+
+  /* Sections */
+  section: { marginBottom: 24 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  sectionCount: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  cardPoolScroll: {
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  sectionCount: { fontSize: 14, color: '#666', fontWeight: '500' },
 
-    maxHeight: 250,
-    backgroundColor: 'white',
+  /* Card pool */
+  cardPoolScroll: {
+    maxHeight: 440,
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
@@ -436,19 +674,11 @@ const styles = StyleSheet.create({
   cardPoolGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    display: 'flex',
     justifyContent: 'center',
     gap: 10,
   },
-  cardPoolItem: {
-    width: '23%',
-    marginBottom: 8,
-  },
-  cardImageContainer: {
-    position: 'relative',
-    aspectRatio: 0.686,
-    marginBottom: 4,
-  },
+  cardPoolItem: { width: '23%', marginBottom: 8 },
+  cardImageContainer: { aspectRatio: 0.686, marginBottom: 4 },
   cardImagePlaceholder: {
     width: '100%',
     height: '100%',
@@ -459,86 +689,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
   },
-  cardImageText: {
-    fontSize: 10,
+  cardImageText: { fontSize: 10, color: '#999', fontWeight: '600' },
+
+  loadingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingText: { fontSize: 12, color: '#666' },
+  endOfListText: {
+    fontSize: 12,
     color: '#999',
-    fontWeight: '600',
-  },
-  cardPoolName: {
-    fontSize: 10,
-    color: '#333',
     textAlign: 'center',
+    paddingVertical: 16,
+    fontStyle: 'italic',
   },
-  countBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  noResultsText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 32,
   },
-  countBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '700',
-  },
+
+  /* Deck containers */
   deckContainer: {
     height: 500,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     padding: 8,
   },
-  smallDeckContainer: {
-    height: 200,
-  },
-  deckGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  deckCardItem: {
-    width: '18%',
-    marginBottom: 8,
-  },
-  deckCardName: {
-    fontSize: 9,
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  cardControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  controlButton: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#2196F3',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  controlButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  controlButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 14,
-  },
-  controlCount: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#333',
-    minWidth: 12,
-    textAlign: 'center',
-  },
+  smallDeckContainer: { height: 200 },
+  deckGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });
 
 export default DeckDetailPage;

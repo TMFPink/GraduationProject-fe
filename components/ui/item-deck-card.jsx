@@ -1,12 +1,24 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { cardApi } from '@/src/api/card-api';
+
 
 const DeckCardItem = ({ card, count, onAdd, onRemove, maxCount = 3 }) => {
   return (
     <View style={styles.deckCardItem}>
       <View style={styles.cardImageContainer}>
         <View style={styles.cardImagePlaceholder}>
-          <Text style={styles.cardImageText}>IMG</Text>
+          {card.image_thumb_url ? (
+            <Image
+              source={{ uri: card.image_normal_url }}
+              style={styles.cardImagePlaceholder}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.cardImagePlaceholder}>
+              <Text style={styles.cardImageText}>No Image</Text>
+            </View>
+          )}
         </View>
 
         {count > 1 && (
