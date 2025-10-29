@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Modal,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -17,6 +18,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { deckApi } from '@/src/api/deck-api';
 import { cardApi } from '@/src/api/card-api';
+import FilterModal from '@/components/ui/modals/filterModal';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 /* --------------------------------------------------------------
    CardPoolItem – tiny reusable component for the card pool
@@ -39,11 +42,16 @@ const CardPoolItem = ({ card, onAdd }) => (
   </TouchableOpacity>
 );
 
+
+
 /* --------------------------------------------------------------
    Main component
    -------------------------------------------------------------- */
 const DeckDetailPage = () => {
   const { deckId } = useLocalSearchParams();
+
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+
 
   /* ---------- Deck meta ---------- */
   const [deckName, setDeckName] = useState('New Deck');
@@ -68,6 +76,14 @@ const DeckDetailPage = () => {
   const [hasMoreCards, setHasMoreCards] = useState(true);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchTimer, setSearchTimer] = useState(null);
+
+  const [activeFilters, setActiveFilters] = useState({});
+
+  const handleFilterApply = (newFilters) => {
+    setActiveFilters(newFilters);
+    performSearch(searchQuery, newFilters);
+  };
+
 
   
   const CARDS_PER_PAGE = 20;
@@ -143,55 +159,68 @@ const DeckDetailPage = () => {
   /* --------------------------------------------------------------
      Card pool – pagination & search
      -------------------------------------------------------------- */
-  const loadCardPool = async (page = 1, append = false, query = '') => {
-    if (isLoadingMore) return;
-    setIsLoadingMore(true);
+  const loadCardPool = async (page = 1, append = false, query = '', filters = {}) => {
+  if (isLoadingMore) return;
+  setIsLoadingMore(true);
 
-    try {
-      const response = await cardApi.getMetadataCard(
-        query ? 1000 : CARDS_PER_PAGE,
-        page,
-        query
-      );
+  try {
+    // ✅ Pass filters as the 4th param
+    const response = await cardApi.getMetadataCard(
+      query ? 1000 : CARDS_PER_PAGE,
+      page,
+      query,
+      filters
+    );
 
-      if (response.statusCode === 200 && response.metadata?.cards) {
-        const cards = response.metadata.cards;
-        setHasMoreCards(!query && cards.length === CARDS_PER_PAGE);
+    if (response.statusCode === 200 && response.metadata?.cards) {
+      const cards = response.metadata.cards;
+      setHasMoreCards(!query && cards.length === CARDS_PER_PAGE);
 
-        if (append) setCardPool((prev) => [...prev, ...cards]);
-        else setCardPool(cards);
+      if (append) {
+        setCardPool((prev) => [...prev, ...cards]);
       } else {
-        setCardPool([]);
+        setCardPool(cards);
       }
-    } catch {
+    } else {
       setCardPool([]);
-    } finally {
-      setIsLoadingMore(false);
     }
-  };
+  } catch (error) {
+    console.error('Error loading cards:', error);
+    setCardPool([]);
+  } finally {
+    setIsLoadingMore(false);
+  }
+};
 
-  const performSearch = (text) => {
-    const trimmed = text.trim();
-    setIsSearchMode(!!trimmed);
-    setCurrentPage(1);
-    setHasMoreCards(!trimmed);
-    loadCardPool(1, false, trimmed);
-  };
+const performSearch = (text, filters = {}) => {
+  const trimmed = text.trim();
+  setIsSearchMode(!!trimmed);
+  setCurrentPage(1);
+  setHasMoreCards(!trimmed);
 
-  const handleSearchChange = (text) => {
-    setSearchQuery(text);
-    if (searchTimer) clearTimeout(searchTimer);
-    const timer = setTimeout(() => performSearch(text), 400);
-    setSearchTimer(timer);
-  };
+  // ✅ Apply search + filters
+  loadCardPool(1, false, trimmed, filters);
+};
 
-  const loadMore = () => {
-    if (!isLoadingMore && hasMoreCards && !isSearchMode) {
-      const next = currentPage + 1;
-      setCurrentPage(next);
-      loadCardPool(next, true);
-    }
-  };
+const handleSearchChange = (text) => {
+  setSearchQuery(text);
+  if (searchTimer) clearTimeout(searchTimer);
+
+  const timer = setTimeout(() => {
+    performSearch(text, activeFilters); // ✅ include active filters
+  }, 400);
+
+  setSearchTimer(timer);
+};
+
+const loadMore = () => {
+  if (!isLoadingMore && hasMoreCards && !isSearchMode) {
+    const next = currentPage + 1;
+    setCurrentPage(next);
+    loadCardPool(next, true, searchQuery, activeFilters); // ✅ include filters
+  }
+};
+
 
   const handleScroll = ({ nativeEvent }) => {
     const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
@@ -375,6 +404,7 @@ const DeckDetailPage = () => {
         </TouchableOpacity>
 
         {/* Search */}
+        {/* Search + Filter Row */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <TextInput
@@ -392,13 +422,25 @@ const DeckDetailPage = () => {
                 <Text style={styles.clearButtonText}>X</Text>
               </TouchableOpacity>
             ) : null}
+                      {/* Filter Icon Button */}
+          <TouchableOpacity
+            style={styles.filterIconButton}
+            onPress={() => setIsFilterModalVisible(true)}
+          >
+            <MaterialCommunityIcons name="filter-variant" size={22} color="#333" />
+          </TouchableOpacity>
           </View>
-          {isSearchMode && (
-            <Text style={styles.searchModeText}>
-              {cardPool.length} result{cardPool.length !== 1 ? 's' : ''} found
-            </Text>
-          )}
+
+
         </View>
+
+        {isSearchMode && (
+          <Text style={styles.searchModeText}>
+            {cardPool.length} result{cardPool.length !== 1 ? 's' : ''} found
+          </Text>
+        )}
+
+
 
         {/* Filters */}
         <View style={styles.controlsRow}>
@@ -547,6 +589,14 @@ const DeckDetailPage = () => {
           </View>
         </View>
       </View>
+
+      <FilterModal
+        visible={isFilterModalVisible}
+        onClose={() => setIsFilterModalVisible(false)}
+        onApply={handleFilterApply}
+        defaultFilters={activeFilters}
+      />
+
     </ScrollView>
   );
 };
@@ -724,6 +774,17 @@ const styles = StyleSheet.create({
   },
   smallDeckContainer: { height: 200 },
   deckGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+filterIconButton: {
+  width: 46,
+  height: 46,
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
 });
 
 export default DeckDetailPage;
