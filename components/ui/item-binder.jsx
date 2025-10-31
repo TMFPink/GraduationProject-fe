@@ -1,11 +1,14 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 
-const BinderCard = ({ image, name, setName, qty = 1, price }) => {
+const BinderCard = ({ image, name, setName, qty = 1, price, onPress }) => {
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
       <Image source={{ uri: image }} style={styles.cardImage} resizeMode="contain" />
-
       <View style={styles.cardContent}>
         <Text style={styles.itemName} numberOfLines={1}>
           {name}
@@ -16,11 +19,14 @@ const BinderCard = ({ image, name, setName, qty = 1, price }) => {
           <Text style={styles.priceText}>${price}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
 export default BinderCard;
+
+// Styles remain the same as your version
+
 
 const styles = StyleSheet.create({
   card: {

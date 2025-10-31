@@ -1,85 +1,216 @@
-import React from 'react';
-import { View, Text, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
+import { cardApi } from '@/src/api/card-api';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function CardDetailPage() {
-  const cardData = {
-    name: 'Meowscarada EX',
-    rarity: 'Special Illustration Rare',
-    code: '69/420 · Paldea Evolved',
-    cardText: 'You must discard a Basic E Energy card from your hand in order to use this Ability. Once during your turn, you may put 3 damage counter on 1 of your opponent\'s Benched Pokémon.',
-    prices: [
-      { platform: 'TCGPlayer', price: 39.99 },
-      { platform: 'CardMarket', price: 39.99 },
-      { platform: 'eBay', price: 39.99 },
-    ],
+  const params = useLocalSearchParams();
+  const [card, setCard] = useState(null);
+  const [relatedCards, setRelatedCards] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const passedCard = params.card ? JSON.parse(params.card) : null;
+
+  useEffect(() => {
+    const fetchCardDetails = async () => {
+      if (passedCard) {
+        setCard(passedCard);
+        setLoading(false);
+      } else if (params.card_id) {
+        try {
+          const response = await cardApi.getCardById(params.card_id);
+          if (response.statusCode === 200 && response.metadata) {
+            setCard(response.metadata);
+          }
+        } catch (error) {
+          console.error('Failed to load card:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    fetchCardDetails();
+  }, []);
+
+  useEffect(() => {
+    if (card && card.meta_data?.archetype) {
+      const fetchRelatedCards = async () => {
+        try {
+          const response = await cardApi.getMetadataCard(20, 1, '', { archetype: card.meta_data.archetype });
+          console.log('Related cards response:', response);
+          if (response.metadata) {
+            setRelatedCards(response.metadata.cards.filter((relCard) => relCard.card_id !== card.card_id));
+          }
+        } catch (error) {
+          console.error('Failed to load related cards:', error);
+        }
+      };
+      fetchRelatedCards();
+    }
+  }, [card]);
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#EA6C5D" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading card details...</Text>
+      </View>
+    );
+  }
+
+  if (!card) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: '#666' }}>Card not found.</Text>
+      </View>
+    );
+  }
+
+  const meta = card.meta_data || {};
+  const banlist = meta.banlist_info || {};
+  const hasBanlist = banlist.ban_ocg || banlist.ban_tcg;
+
+  const getBanColor = (status) => {
+    switch (status) {
+      case 'Forbidden':
+        return '#B71C1C'; // red
+      case 'Limited':
+        return '#F57C00'; // orange
+      case 'Semi-Limited':
+        return '#4CAF50'; // green
+      default:
+        return '#9E9E9E'; // gray
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Card Image */}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Back button */}
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#000" />
+        </TouchableOpacity>
+
+        {/* Image + Status */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: 'https://tcgplayer-cdn.tcgplayer.com/product/497675_in_1000x1000.jpg' }}
+            source={{ uri: card.image_large_url || card.image_normal_url }}
             style={styles.cardImage}
             resizeMode="contain"
           />
-        </View>
 
-        {/* Card Information */}
-        <View style={styles.contentContainer}>
-          <Text style={styles.cardName}>{cardData.name}</Text>
-          <Text style={styles.rarity}>{cardData.rarity}</Text>
-          <Text style={styles.code}>{cardData.code}</Text>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Card Text:</Text>
-            <Text style={styles.cardText}>{cardData.cardText}</Text>
-          </View>
-
-          {/* Prices */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Prices:</Text>
-            <View style={styles.pricesContainer}>
-              {cardData.prices.map((item, index) => (
-                <View key={index} style={styles.priceCard}>
-                  <View style={styles.priceIcon}>
-                    <Text style={styles.priceIconText}>$</Text>
-                  </View>
-                  <Text style={styles.priceAmount}>${item.price}</Text>
+          {/* Banlist + Genesys Section */}
+          {(hasBanlist || true) && (
+            <View style={[styles.section, styles.statusSection]}>
+              {banlist.ban_ocg && (
+                <View
+                  style={[
+                    styles.statusTag,
+                    { backgroundColor: getBanColor(banlist.ban_ocg) },
+                  ]}
+                >
+                  <Text style={styles.statusText}>OCG: {banlist.ban_ocg}</Text>
                 </View>
-              ))}
-            </View>
-          </View>
+              )}
 
-          {/* Decks Related */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Decks related to this card</Text>
-            <View style={styles.deckCard}>
-              <Image
-                source={{ uri: 'YOUR_CARD_IMAGE_URL' }}
-                style={styles.deckThumbnail}
-              />
-              <View style={styles.deckInfo}>
-                <Text style={styles.deckName}>Meowscarada EX</Text>
-                <Text style={styles.deckMeta}>Paldea Evolved</Text>
-                <Text style={styles.deckMeta}>Special Illustration Rare</Text>
-                <Text style={styles.deckMeta}>$39.99</Text>
+              {banlist.ban_tcg && (
+                <View
+                  style={[
+                    styles.statusTag,
+                    { backgroundColor: getBanColor(banlist.ban_tcg) },
+                  ]}
+                >
+                  <Text style={styles.statusText}>TCG: {banlist.ban_tcg}</Text>
+                </View>
+              )}
+
+              <View style={[styles.statusTag, { backgroundColor: '#D4AF37' }]}>
+                <Text style={styles.statusText}>
+                  Genesys: {meta.genesys_points ?? 0}
+                </Text>
               </View>
             </View>
+          )}
+        </View>
+
+        {/* Card Info */}
+        <View style={styles.contentContainer}>
+          <Text style={styles.cardName}>{card.name}</Text>
+          <Text style={styles.rarity}>{meta.type || '—'}</Text>
+
+          <View style={styles.metaContainer}>
+            {meta.attribute && <Text style={styles.metaText}>Attribute: {meta.attribute}</Text>}
+            {meta.archetype && <Text style={styles.metaText}>Archetype: {meta.archetype}</Text>}
+            {meta.level && <Text style={styles.metaText}>Level/ Rank: {meta.level}</Text>}
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {meta.atk !== null && <Text style={styles.metaText}>ATK: {meta.atk}</Text>}
+              {meta.def !== null && <Text style={styles.metaText}>DEF: {meta.def}</Text>}
+            </View>
           </View>
 
-
+          <View>
+            <Text style={styles.sectionTitle}>Description:</Text>
+            <Text style={styles.cardText}>{meta.desc || 'No description available.'}</Text>
+          </View>
         </View>
+        
+        {/* Related cards */}
+        <View style={styles.relatedSection}>
+          <Text style={styles.sectionTitle}>Related Cards</Text>
+
+          {relatedCards.length === 0 ? (
+            <Text style={{ color: '#666', paddingVertical: 12, textAlign: 'center' }}>
+              No related cards found.
+            </Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.relatedScroll}
+            >
+              {relatedCards.map((relCard) => (
+                <TouchableOpacity
+                  key={relCard.card_id}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/cardDetail',
+                      params: { card: JSON.stringify(relCard) },
+                    })
+                  }
+                  style={styles.relatedCard}
+                >
+                  <Image
+                    source={{ uri: relCard.image_small_url || relCard.image_normal_url }}
+                    style={styles.relatedImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.relatedName}>{relCard.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+            
+          </View>
       </ScrollView>
 
-      {/* Fixed Add to Collection Button */}
+      {/* Add to Collection Button */}
       <View style={styles.fixedButtonContainer}>
         <TouchableOpacity style={styles.addButton}>
           <Text style={styles.addButtonText}>Add to Collection</Text>
@@ -90,167 +221,93 @@ export default function CardDetailPage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100, // Space for fixed button
-  },
-  imageContainer: {
-    backgroundColor: '#fff',
-    padding: 24,
-    alignItems: 'center',
-  },
-  cardImage: {
-    width: SCREEN_WIDTH - 48,
-    height: 400,
-    borderRadius: 12,
-  },
-  contentContainer: {
-    backgroundColor: '#fff',
-    padding: 24,
-  },
-  cardName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  rarity: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
-  },
-  code: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 12,
-  },
-  cardText: {
-    fontSize: 15,
-    color: '#444',
-    lineHeight: 22,
-  },
-  pricesContainer: {
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 80 }, // reduced bottom gap
+  imageContainer: { backgroundColor: '#fff', paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' },
+  cardImage: { width: SCREEN_WIDTH - 64, height: 380, borderRadius: 10},
+  contentContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16 },
+  cardName: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 4 },
+  rarity: { fontSize: 15, color: '#666', marginBottom: 10 },
+  metaContainer: { marginBottom: 12 },
+  metaText: { fontSize: 14, color: '#444', marginBottom: 2 },
+  // section: { marginBottom: 16 },
+  sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1a1a1a', marginBottom: 6 },
+  cardText: { fontSize: 15, color: '#444', lineHeight: 21 },
+
+  // Status section
+  statusSection: {
     flexDirection: 'row',
-    gap: 12,
     flexWrap: 'wrap',
-  },
-  priceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  priceIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: '#007AFF',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    gap: 8,
+    marginTop: 6,
   },
-  priceIconText: {
+  statusTag: {
+    borderRadius: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  statusText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  priceAmount: {
-    fontSize: 16,
     fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  deckCard: {
-    flexDirection: 'row',
-    backgroundColor: '#f8f8f8',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  deckThumbnail: {
-    width: 60,
-    height: 84,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  deckInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  deckName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  deckMeta: {
     fontSize: 13,
-    color: '#666',
-    marginBottom: 2,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#6B3A4A',
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 24,
-  },
-  navButton: {
-    flex: 1,
-    padding: 12,
-    alignItems: 'center',
-  },
-  navButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
   fixedButtonContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 0, left: 0, right: 0,
     backgroundColor: '#fff',
-    padding: 16,
-    paddingBottom: 24,
+    padding: 12,
+    paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 5,
+    elevation: 4,
   },
   addButton: {
     backgroundColor: '#8B0000',
-    padding: 16,
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  addButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  backButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    zIndex: 2,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 6,
+    elevation: 2,
+  },
+  relatedSection: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  relatedScroll: {
+    paddingHorizontal: 0,
+  },
+  relatedCard: {
+    width: 120,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  relatedImage: {
+    width: 100,
+    height: 146,
+    borderRadius: 5,
+  },
+  relatedName: {
+    marginTop: 4,
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#1a1a1a',
   },
 });
