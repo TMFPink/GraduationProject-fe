@@ -10,9 +10,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { cardApi } from '@/src/api/card-api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { cardApi } from '@/src/api/card-api';
+import { collectionApi } from '@/src/api/collection-api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -24,6 +26,18 @@ export default function CardDetailPage() {
 
   const passedCard = params.card ? JSON.parse(params.card) : null;
 
+  // ✅ Add to collection (button handler)
+  const addCardToCollection = async () => {
+    if (!card) return;
+    try {
+      await addCardToOwnedCards(card.card_id);
+      console.log('✅ Card added to Owned Cards collection');
+    } catch (error) {
+      console.error('❌ Failed to add card to collection:', error);
+    }
+  };
+
+  // ✅ Fetch card details
   useEffect(() => {
     const fetchCardDetails = async () => {
       if (passedCard) {
@@ -47,14 +61,21 @@ export default function CardDetailPage() {
     fetchCardDetails();
   }, []);
 
+  // ✅ Fetch related cards by archetype
   useEffect(() => {
     if (card && card.meta_data?.archetype) {
       const fetchRelatedCards = async () => {
         try {
-          const response = await cardApi.getMetadataCard(20, 1, '', { archetype: card.meta_data.archetype });
-          console.log('Related cards response:', response);
-          if (response.metadata) {
-            setRelatedCards(response.metadata.cards.filter((relCard) => relCard.card_id !== card.card_id));
+          const response = await cardApi.getMetadataCard(20, 1, '', {
+            archetype: card.meta_data.archetype,
+          });
+
+          if (response.metadata?.cards) {
+            setRelatedCards(
+              response.metadata.cards.filter(
+                (relCard) => relCard.card_id !== card.card_id
+              )
+            );
           }
         } catch (error) {
           console.error('Failed to load related cards:', error);
@@ -64,6 +85,7 @@ export default function CardDetailPage() {
     }
   }, [card]);
 
+  // ✅ Loading UI
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -73,6 +95,7 @@ export default function CardDetailPage() {
     );
   }
 
+  // ✅ No card found
   if (!card) {
     return (
       <View style={styles.centered}>
@@ -88,20 +111,69 @@ export default function CardDetailPage() {
   const getBanColor = (status) => {
     switch (status) {
       case 'Forbidden':
-        return '#B71C1C'; // red
+        return '#B71C1C';
       case 'Limited':
-        return '#F57C00'; // orange
+        return '#F57C00';
       case 'Semi-Limited':
-        return '#4CAF50'; // green
+        return '#4CAF50';
       default:
-        return '#9E9E9E'; // gray
+        return '#9E9E9E';
     }
   };
+
+  // 🔧 Get or create the default "Owned Cards" collection
+const getOrCreateOwnedCardsCollection = async () => {
+  try {
+    const response = await collectionApi.getAllCollection(1, 100);
+    const collections = response.metadata?.collections || response.collections || [];
+
+    const ownedCardsCollection = collections.find((col) => col.name === "Owned Cards");
+
+    if (ownedCardsCollection) return ownedCardsCollection;
+
+    const createResponse = await collectionApi.createCollection({
+      name: "Owned Cards",
+      card_type: "ygo",
+      cards: [],
+    });
+
+    return createResponse.metadata?.collection || createResponse.collection || createResponse;
+  } catch (error) {
+    console.error("Failed to get/create Owned Cards collection:", error);
+    throw error;
+  }
+};
+
+// 🃏 Add card to "Owned Cards" collection
+const addCardToOwnedCards = async (card_id) => {
+  try {
+    const ownedCardsCollection = await getOrCreateOwnedCardsCollection();
+    const response = await collectionApi.addCardToCollection(ownedCardsCollection.collection_id, { card_id });
+    console.log("✅ Card added to Owned Cards collection");
+    return response;
+  } catch (error) {
+    console.error("Failed to add card to Owned Cards:", error);
+    throw error;
+  }
+};
+
+// 📦 Get all cards from "Owned Cards" collection
+const getOwnedCards = async () => {
+  try {
+    const ownedCardsCollection = await getOrCreateOwnedCardsCollection();
+    const collectionDetails = await collectionApi.getCollectionById(ownedCardsCollection.collection_id);
+    return collectionDetails.metadata?.cards || collectionDetails.cards || [];
+  } catch (error) {
+    console.error("Failed to get owned cards:", error);
+    return [];
+  }
+};
+
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Back button */}
+        {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
@@ -114,7 +186,7 @@ export default function CardDetailPage() {
             resizeMode="contain"
           />
 
-          {/* Banlist + Genesys Section */}
+          {/* Banlist + Genesys */}
           {(hasBanlist || true) && (
             <View style={[styles.section, styles.statusSection]}>
               {banlist.ban_ocg && (
@@ -127,7 +199,6 @@ export default function CardDetailPage() {
                   <Text style={styles.statusText}>OCG: {banlist.ban_ocg}</Text>
                 </View>
               )}
-
               {banlist.ban_tcg && (
                 <View
                   style={[
@@ -138,7 +209,6 @@ export default function CardDetailPage() {
                   <Text style={styles.statusText}>TCG: {banlist.ban_tcg}</Text>
                 </View>
               )}
-
               <View style={[styles.statusTag, { backgroundColor: '#D4AF37' }]}>
                 <Text style={styles.statusText}>
                   Genesys: {meta.genesys_points ?? 0}
@@ -156,7 +226,7 @@ export default function CardDetailPage() {
           <View style={styles.metaContainer}>
             {meta.attribute && <Text style={styles.metaText}>Attribute: {meta.attribute}</Text>}
             {meta.archetype && <Text style={styles.metaText}>Archetype: {meta.archetype}</Text>}
-            {meta.level && <Text style={styles.metaText}>Level/ Rank: {meta.level}</Text>}
+            {meta.level && <Text style={styles.metaText}>Level/Rank: {meta.level}</Text>}
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
               {meta.atk !== null && <Text style={styles.metaText}>ATK: {meta.atk}</Text>}
@@ -169,11 +239,10 @@ export default function CardDetailPage() {
             <Text style={styles.cardText}>{meta.desc || 'No description available.'}</Text>
           </View>
         </View>
-        
+
         {/* Related cards */}
         <View style={styles.relatedSection}>
           <Text style={styles.sectionTitle}>Related Cards</Text>
-
           {relatedCards.length === 0 ? (
             <Text style={{ color: '#666', paddingVertical: 12, textAlign: 'center' }}>
               No related cards found.
@@ -205,14 +274,12 @@ export default function CardDetailPage() {
               ))}
             </ScrollView>
           )}
-
-            
-          </View>
+        </View>
       </ScrollView>
 
-      {/* Add to Collection Button */}
+      {/* Fixed Add Button */}
       <View style={styles.fixedButtonContainer}>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity style={styles.addButton} onPress={addCardToCollection}>
           <Text style={styles.addButtonText}>Add to Collection</Text>
         </TouchableOpacity>
       </View>
@@ -223,19 +290,21 @@ export default function CardDetailPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: 80 }, // reduced bottom gap
-  imageContainer: { backgroundColor: '#fff', paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' },
-  cardImage: { width: SCREEN_WIDTH - 64, height: 380, borderRadius: 10},
+  scrollContent: { paddingBottom: 80 },
+  imageContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  cardImage: { width: SCREEN_WIDTH - 64, height: 380, borderRadius: 10 },
   contentContainer: { backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16 },
   cardName: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 4 },
   rarity: { fontSize: 15, color: '#666', marginBottom: 10 },
   metaContainer: { marginBottom: 12 },
   metaText: { fontSize: 14, color: '#444', marginBottom: 2 },
-  // section: { marginBottom: 16 },
   sectionTitle: { fontSize: 17, fontWeight: '600', color: '#1a1a1a', marginBottom: 6 },
   cardText: { fontSize: 15, color: '#444', lineHeight: 21 },
-
-  // Status section
   statusSection: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -253,10 +322,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 13,
   },
-
   fixedButtonContainer: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
     padding: 12,
     paddingBottom: 20,
@@ -286,28 +356,9 @@ const styles = StyleSheet.create({
     padding: 6,
     elevation: 2,
   },
-  relatedSection: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  relatedScroll: {
-    paddingHorizontal: 0,
-  },
-  relatedCard: {
-    width: 120,
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  relatedImage: {
-    width: 100,
-    height: 146,
-    borderRadius: 5,
-  },
-  relatedName: {
-    marginTop: 4,
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#1a1a1a',
-  },
+  relatedSection: { backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 16 },
+  relatedScroll: { paddingHorizontal: 0 },
+  relatedCard: { width: 120, alignItems: 'center', marginRight: 12 },
+  relatedImage: { width: 100, height: 146, borderRadius: 5 },
+  relatedName: { marginTop: 4, textAlign: 'center', fontSize: 12, color: '#1a1a1a' },
 });

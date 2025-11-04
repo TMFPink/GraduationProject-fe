@@ -1,14 +1,62 @@
 // screens/CollectionPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { 
   StyleSheet, View, Text, TouchableOpacity, 
-  ScrollView, TextInput   
+  ScrollView, TextInput, Image, ActivityIndicator  
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import ItemDeck from '../../../components/ui/item-deck';
+import { collectionApi } from '@/src/api/collection-api';
 
 const CollectionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [ownedCards, setOwnedCards] = useState([]);
+  const [myBinders, setMyBinders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch collections and owned cards
+  const fetchCollections = async () => {
+    try {
+      setLoading(true);
+      
+      // Get all collections
+      const response = await collectionApi.getAllCollection(1, 100);
+      
+      // Separate "Owned Cards" from custom binders
+      const collections = response.collections || [];
+      const binders = collections.filter(col => col.name !== "Owned Cards");
+      const ownedCollection = collections.find(col => col.name === "Owned Cards");
+      
+      setMyBinders(binders);
+      
+      // Get full details of "Owned Cards" collection
+      if (ownedCollection) {
+        const collectionDetails = await collectionApi.getCollectionById(
+          ownedCollection.collection_id
+        );
+        setOwnedCards(collectionDetails.cards || []);
+      } else {
+        setOwnedCards([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch collections:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCollections();
+  }, []);
+
+  // Refetch when page gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCollections();
+    }, [])
+  );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -30,20 +78,57 @@ const CollectionPage = () => {
           />
         </View>
 
-        {/* ===== Featured Product Section ===== */}
+        {/* ===== Owned Cards Section ===== */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeaderText}>Owned Cards</Text>
           <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editText}>View</Text>
+            <Text style={styles.editText}>View All</Text>
           </TouchableOpacity>
         </View>
-
         <View style={[styles.deckContainer, styles.featuredDeckContainer]}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.deckGrid}>
-              {/* Future featured items here */}
+          {loading ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#8B0000" />
             </View>
-          </ScrollView>
+          ) : ownedCards.length === 0 ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#666', textAlign: 'center' }}>
+                No cards in your collection yet.{'\n'}
+                Add cards from the card detail page.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 8 }}
+            >
+              {ownedCards.map((card, index) => (
+                <TouchableOpacity
+                  key={`${card.card_id}-${index}`}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/cardDetail',
+                      params: { card: JSON.stringify(card) },
+                    })
+                  }
+                  style={styles.ownedCardItem}
+                >
+                  <Image
+                    source={{ uri: card.image_normal_url || card.image_small_url }}
+                    style={styles.ownedCardImage}
+                    resizeMode="contain"
+                  />
+                  <Text 
+                    style={styles.ownedCardName}
+                    numberOfLines={2}
+                  >
+                    {card.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* ===== My Collection ===== */}
@@ -56,7 +141,13 @@ const CollectionPage = () => {
             name="Create Binder"
             isCreateNew={true}
           />
-          <ItemDeck name="My First Binder" />
+          {myBinders.map((binder) => (
+            <ItemDeck 
+              key={binder.collection_id}
+              name={binder.name}
+              collectionId={binder.collection_id}
+            />
+          ))}
         </View>
 
       </View>
@@ -70,6 +161,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fafafa',
+    paddingBottom: 80,
+
   },
   content: {
     paddingHorizontal: 20,
@@ -144,5 +237,24 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 16,
+  },
+  // Owned Cards Styling
+  ownedCardItem: {
+    marginRight: 12,
+    width: 110,
+    alignItems: 'center',
+  },
+  ownedCardImage: {
+    width: 100,
+    height: 146,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  ownedCardName: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#1a1a1a',
+    textAlign: 'center',
+    width: 100,
   },
 });

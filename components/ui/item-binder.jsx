@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 
+
+
 const BinderCard = ({ image, name, setName, qty = 1, price, onPress }) => {
   return (
     <TouchableOpacity
