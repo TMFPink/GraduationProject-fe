@@ -76,8 +76,7 @@ const DeckListPage = ({ route }) => {
       if (createdDeck && createdDeck.deck_id) {
         setDecks(prev => [...prev, createdDeck]);
         
-        // ✅ FIXED: Pass only deckId - DeckDetail will fetch full data
-        router.push({
+        router.navigate({
           pathname: '/decks/deckDetail',
           params: { 
             deckId: createdDeck.deck_id

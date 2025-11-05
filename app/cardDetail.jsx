@@ -8,13 +8,13 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { cardApi } from '@/src/api/card-api';
-import { collectionApi } from '@/src/api/collection-api';
+import { ownedCardApi } from '@/src/api/ownedcard-api'; 
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,14 +26,31 @@ export default function CardDetailPage() {
 
   const passedCard = params.card ? JSON.parse(params.card) : null;
 
-  // ✅ Add to collection (button handler)
+  // ✅ Add card to owned cards
   const addCardToCollection = async () => {
     if (!card) return;
+    
     try {
-      await addCardToOwnedCards(card.card_id);
-      console.log('✅ Card added to Owned Cards collection');
+      // Add card to owned cards using ownedCardApi
+      await ownedCardApi.addOwnedCards(
+        card.card_id,
+        card.card_domain_id
+      );
+      console.log("Sending to backend:", {
+        card_id: card.card_id,
+        card_domain_id: card.card_domain_id,
+      });
+
+      Alert.alert('Success', 'Card added to your collection!');
+      console.log('✅ Card added to Owned Cards');
     } catch (error) {
-      console.error('❌ Failed to add card to collection:', error);
+      console.error('❌ Failed to add card:', error);
+      console.log("Sending to backend:", {
+        card_id: card.card_id,
+        card_domain_id: card.card_domain_id,
+      });
+
+      Alert.alert('Error', 'Failed to add card to collection');
     }
   };
 
@@ -120,55 +137,6 @@ export default function CardDetailPage() {
         return '#9E9E9E';
     }
   };
-
-  // 🔧 Get or create the default "Owned Cards" collection
-const getOrCreateOwnedCardsCollection = async () => {
-  try {
-    const response = await collectionApi.getAllCollection(1, 100);
-    const collections = response.metadata?.collections || response.collections || [];
-
-    const ownedCardsCollection = collections.find((col) => col.name === "Owned Cards");
-
-    if (ownedCardsCollection) return ownedCardsCollection;
-
-    const createResponse = await collectionApi.createCollection({
-      name: "Owned Cards",
-      card_type: "ygo",
-      cards: [],
-    });
-
-    return createResponse.metadata?.collection || createResponse.collection || createResponse;
-  } catch (error) {
-    console.error("Failed to get/create Owned Cards collection:", error);
-    throw error;
-  }
-};
-
-// 🃏 Add card to "Owned Cards" collection
-const addCardToOwnedCards = async (card_id) => {
-  try {
-    const ownedCardsCollection = await getOrCreateOwnedCardsCollection();
-    const response = await collectionApi.addCardToCollection(ownedCardsCollection.collection_id, { card_id });
-    console.log("✅ Card added to Owned Cards collection");
-    return response;
-  } catch (error) {
-    console.error("Failed to add card to Owned Cards:", error);
-    throw error;
-  }
-};
-
-// 📦 Get all cards from "Owned Cards" collection
-const getOwnedCards = async () => {
-  try {
-    const ownedCardsCollection = await getOrCreateOwnedCardsCollection();
-    const collectionDetails = await collectionApi.getCollectionById(ownedCardsCollection.collection_id);
-    return collectionDetails.metadata?.cards || collectionDetails.cards || [];
-  } catch (error) {
-    console.error("Failed to get owned cards:", error);
-    return [];
-  }
-};
-
 
   return (
     <View style={styles.container}>

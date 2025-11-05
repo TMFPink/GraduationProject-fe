@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { 
   StyleSheet, View, Text, TouchableOpacity, 
-  ScrollView, TextInput, Image, ActivityIndicator  
+  ScrollView, TextInput, Image, ActivityIndicator, Alert  
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import ItemDeck from '../../../components/ui/item-deck';
 import { collectionApi } from '@/src/api/collection-api';
+import { ownedCardApi } from '@/src/api/ownedcard-api';
 
 const CollectionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,32 +16,26 @@ const CollectionPage = () => {
   const [myBinders, setMyBinders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch collections and owned cards
-  const fetchCollections = async () => {
+  // Fetch owned cards and collections
+  const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Get all collections
-      const response = await collectionApi.getAllCollection(1, 100);
+      // Fetch owned cards using ownedCardApi
+      const ownedResponse = await ownedCardApi.getAllOwnedCards(1, 100);
+      const ownedCardsData = ownedResponse.metadata?.ownedCards || [];
+      setOwnedCards(ownedCardsData);
       
-      // Separate "Owned Cards" from custom binders
-      const collections = response.collections || [];
+      // Fetch custom binders (collections)
+      const collectionsResponse = await collectionApi.getAllCollection(1, 100);
+      const collections = collectionsResponse.metadata?.collections || collectionsResponse.collections || [];
+      
+      // Filter out any "Owned Cards" collection if it exists (we don't need it anymore)
       const binders = collections.filter(col => col.name !== "Owned Cards");
-      const ownedCollection = collections.find(col => col.name === "Owned Cards");
-      
       setMyBinders(binders);
       
-      // Get full details of "Owned Cards" collection
-      if (ownedCollection) {
-        const collectionDetails = await collectionApi.getCollectionById(
-          ownedCollection.collection_id
-        );
-        setOwnedCards(collectionDetails.cards || []);
-      } else {
-        setOwnedCards([]);
-      }
     } catch (error) {
-      console.error('Failed to fetch collections:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -48,14 +43,78 @@ const CollectionPage = () => {
 
   // Initial fetch
   useEffect(() => {
-    fetchCollections();
+    fetchData();
   }, []);
 
   // Refetch when page gains focus
   useFocusEffect(
     React.useCallback(() => {
-      fetchCollections();
+      fetchData();
     }, [])
+  );
+
+  // === Create new binder ===
+  const handleCreateBinder = async () => {
+    try {
+      const defaultBinder = {
+        name: 'New Binder',
+        card_type: 'ygo',
+        cards: []
+      };
+
+      const response = await collectionApi.createCollection(defaultBinder);
+      const createdBinder = response?.metadata?.collection;
+
+      if (createdBinder && createdBinder.collection_id) {
+        setMyBinders(prev => [...prev, createdBinder]);
+        Alert.alert('Success', 'New binder created!');
+      } else {
+        console.error('Unexpected response structure:', response);
+        Alert.alert('Error', 'Failed to create new binder.');
+      }
+    } catch (error) {
+      console.error('Error creating binder:', error);
+      Alert.alert('Error', 'Unable to create new binder.');
+    }
+  };
+
+  // === Delete binder ===
+  const handleDeleteBinder = async (collectionId) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this binder?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await collectionApi.deleteCollection(collectionId);
+              setMyBinders(prev => prev.filter(b => b.collection_id !== collectionId));
+              Alert.alert('Success', 'Binder deleted.');
+            } catch (err) {
+              console.error('Delete failed:', err);
+              Alert.alert('Error', 'Failed to delete binder.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCollectionPress = (binder) => {
+    router.push({ 
+      pathname: '/collections/collectionDetail', 
+      params: { 
+        collectionId: binder.collection_id 
+      } 
+    });
+  };
+
+  // Filter binders by search
+  const filteredBinders = myBinders.filter(binder =>
+    binder.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -103,35 +162,44 @@ const CollectionPage = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingVertical: 8 }}
             >
-              {ownedCards.map((card, index) => (
-                <TouchableOpacity
-                  key={`${card.card_id}-${index}`}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/cardDetail',
-                      params: { card: JSON.stringify(card) },
-                    })
-                  }
-                  style={styles.ownedCardItem}
-                >
-                  <Image
-                    source={{ uri: card.image_normal_url || card.image_small_url }}
-                    style={styles.ownedCardImage}
-                    resizeMode="contain"
-                  />
-                  <Text 
-                    style={styles.ownedCardName}
-                    numberOfLines={2}
+              {ownedCards.map((ownedCard, index) => {
+                const card = ownedCard.Card; // Extract nested Card object
+                return (
+                  <TouchableOpacity
+                    key={`${card.card_id}-${index}`}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/cardDetail',
+                        params: { card: JSON.stringify(card) },
+                      })
+                    }
+                    style={styles.ownedCardItem}
                   >
-                    {card.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Image
+                      source={{ uri: card.image_normal_url || card.image_small_url }}
+                      style={styles.ownedCardImage}
+                      resizeMode="contain"
+                    />
+                    {/* Quantity Badge */}
+                    {ownedCard.quantity > 1 && (
+                      <View style={styles.quantityBadge}>
+                        <Text style={styles.quantityText}>x{ownedCard.quantity}</Text>
+                      </View>
+                    )}
+                    <Text 
+                      style={styles.ownedCardName}
+                      numberOfLines={2}
+                    >
+                      {card.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           )}
         </View>
 
-        {/* ===== My Collection ===== */}
+        {/* ===== My Binders ===== */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeaderText}>My Binders</Text>
         </View>
@@ -140,12 +208,15 @@ const CollectionPage = () => {
           <ItemDeck 
             name="Create Binder"
             isCreateNew={true}
+            onPress={handleCreateBinder}
           />
-          {myBinders.map((binder) => (
+          {filteredBinders.map((binder) => (
             <ItemDeck 
               key={binder.collection_id}
               name={binder.name}
               collectionId={binder.collection_id}
+              onPress={() => handleCollectionPress(binder)}
+              onDelete={() => handleDeleteBinder(binder.collection_id)}
             />
           ))}
         </View>
@@ -162,7 +233,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fafafa',
     paddingBottom: 80,
-
   },
   content: {
     paddingHorizontal: 20,
@@ -243,6 +313,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     width: 110,
     alignItems: 'center',
+    position: 'relative',
   },
   ownedCardImage: {
     width: 100,
@@ -256,5 +327,23 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     textAlign: 'center',
     width: 100,
+  },
+  // Quantity Badge
+  quantityBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#8B0000',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
