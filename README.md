@@ -2,6 +2,12 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## Features
+
+- **Camera Integration**: Take photos using device camera with permission handling
+- **File-based Routing**: Navigate between screens using Expo Router
+- **Cross-platform**: Works on iOS, Android, and web
+
 ## Get started
 
 1. Install dependencies
@@ -10,7 +16,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Install required camera packages
+
+   ```bash
+   npx expo install expo-camera
+   ```
+
+3. Start the app
 
    ```bash
    npx expo start
@@ -24,6 +36,16 @@ In the output, you'll find options to open the app in a
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Camera Usage
+
+Navigate to `/camera` route to access the camera screen. The app will:
+
+- Request camera permissions automatically
+- Allow you to switch between front and rear cameras
+- Capture photos with a single button tap
+- Preview captured images before saving
+- Handle permission denials gracefully
 
 ## Get a fresh project
 

@@ -16,6 +16,8 @@ export const Colors = {
     icon: "#6B7280",
     tabIconDefault: "#9CA3AF",
     tabIconSelected: tintColorLight,
+    borderColor: "#D1D5DB",
+    secondaryText: "#F3F4F6",
     gradient: {
       primary: "#E16A54",
       secondary: "#E16A54",
@@ -28,6 +30,8 @@ export const Colors = {
     icon: "#9CA3AF",
     tabIconDefault: "#6B7280",
     tabIconSelected: tintColorDark,
+    borderColor: "#D1D5DB",
+    secondaryText: "#F3F4F6",
     gradient: {
       primary: "#7C3AED",
       secondary: "#A78BFA",
