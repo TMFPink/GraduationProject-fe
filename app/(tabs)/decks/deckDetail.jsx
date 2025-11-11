@@ -56,8 +56,8 @@ const DeckDetailPage = () => {
   /* ---------- Deck meta ---------- */
   const [deckName, setDeckName] = useState('New Deck');
   const [selectedFormat, setSelectedFormat] = useState('OCG');
-  const [cardDomainId, setCardDomainId] = useState(
-    '11111111-1111-1111-1111-111111111111'
+  const [cardType, setCardType] = useState(
+    'ygo'
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingDeck, setIsLoadingDeck] = useState(true);
@@ -102,10 +102,10 @@ const DeckDetailPage = () => {
       const { metadata } = await deckApi.getDeckById(deckId);
 
       if (metadata?.deck) {
-        const { name, format, card_domain_id, cards } = metadata.deck;
+        const { name, format, card_type, cards } = metadata.deck;
         setDeckName(name ?? 'New Deck');
         setSelectedFormat(format ?? 'OCG');
-        setCardDomainId(card_domain_id ?? cardDomainId);
+        setCardType(card_type ?? cardType);
 
         if (cards?.length) await loadDeckCards(cards);
         else setIsLoadingDeck(false);
@@ -265,7 +265,7 @@ const loadMore = () => {
       await deckApi.updateDeck(deckId, {
         name: deckName,
         format: selectedFormat,
-        card_domain_id: cardDomainId,
+        card_type: cardType,
         cards,
       });
 
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
   },
   cardPoolItem: { width: '23%', marginBottom: 8 },
   cardImageContainer: { aspectRatio: 0.686, marginBottom: 4 },

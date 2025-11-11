@@ -16,6 +16,8 @@ const CollectionPage = () => {
   const [myBinders, setMyBinders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+
+
   // Fetch owned cards and collections
   const fetchData = async () => {
     try {

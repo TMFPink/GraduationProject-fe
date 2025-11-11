@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect, useFocusEffect } from "react";
 import {
   View,
   Text,
@@ -12,15 +12,25 @@ import {
 import Posts from "@/components/ui/post";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BinderCard from "@/components/ui/item-binder";
+import { collectionApi } from '@/src/api/collection-api';
+import { ownedCardApi } from '@/src/api/ownedcard-api';
+import ItemDeck from '../../components/ui/item-deck';
+
 
 const TABS = ["Posts", "Portfolio", "Collections"];
 
 const ProfileScreen = () => {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState(0);
+  const [ownedCards, setOwnedCards] = useState([]);
+  const [myBinders, setMyBinders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
 
+
+  const [cardData] = useState([])
   const [userPosts] = useState([
     {
       id: "1",
@@ -66,49 +76,53 @@ const ProfileScreen = () => {
     setActiveTab(index);
   };
 
-  const cardData = [
-    {
-      id: "1",
-      image: "https://images.ygoprodeck.com/images/cards/98596596.jpg",
-      name: "Red-Eyes Dark Dragoon",
-      setName: "MP22-EN249",
-      qty: 1,
-      price: "69.99",
-    },
-    {
-      id: "2",
-      image: "https://images.ygoprodeck.com/images/cards/89631139.jpg",
-      name: "Blue-Eyes White Dragon",
-      setName: "SDK-001",
-      qty: 2,
-      price: "49.99",
-    },
-    {
-      id: "3",
-      image: "https://images.ygoprodeck.com/images/cards/46986414.jpg",
-      name: "Dark Magician",
-      setName: "SDY-006",
-      qty: 3,
-      price: "39.99",
-    },
-    {
-      id: "4",
-      image: "https://images.ygoprodeck.com/images/cards/38033121.jpg",
-      name: "Dark Magician Girl",
-      setName: "MFC-000",
-      qty: 1,
-      price: "89.99",
-    },
-    {
-      id: "5",
-      image: "https://images.ygoprodeck.com/images/cards/44508094.jpg",
-      name: "Red Dragon Archfiend",
-      setName: "TDGS-EN040",
-      qty: 1,
-      price: "59.99",
-    },
-  ];
 
+
+  // Fetch owned cards and collections
+  const fetchCollection = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch owned cards using ownedCardApi
+      const ownedResponse = await ownedCardApi.getAllOwnedCards(1, 100);
+      const ownedCardsData = ownedResponse.metadata?.ownedCards || [];
+      setOwnedCards(ownedCardsData);
+      
+      // Fetch custom binders (collections)
+      const collectionsResponse = await collectionApi.getAllCollection(1, 100);
+      const collections = collectionsResponse.metadata?.collections || collectionsResponse.collections || [];
+      
+      // Filter out any "Owned Cards" collection if it exists (we don't need it anymore)
+      const binders = collections.filter(col => col.name !== "Owned Cards");
+      setMyBinders(binders);
+      
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCollection();
+  }, []);
+
+  // Refetch when page gains focus
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     fetchData();
+  //   }, [])
+  // );
+
+  const handleCollectionPress = (binder) => {
+    router.push({ 
+      pathname: '/collections/collectionDetail', 
+      params: { 
+        collectionId: binder.collection_id 
+      } 
+    });
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -222,7 +236,7 @@ const ProfileScreen = () => {
 
           {/* Portfolio */}
           <View style={[styles.tabPage, { width }]}>
-            {/* Featured Product */}
+            {/* Featured cards */}
             <View
               style={{
                 flexDirection: "row",
@@ -231,7 +245,7 @@ const ProfileScreen = () => {
                 marginBottom: 10,
               }}
             >
-              <Text style={styles.tabHeader}>Featured Product</Text>
+              <Text style={styles.tabHeader}>Featured Cards</Text>
               <TouchableOpacity style={styles.editButton}>
                 <Text style={styles.editText}>Edit</Text>
               </TouchableOpacity>
@@ -264,16 +278,14 @@ const ProfileScreen = () => {
           <View style={[styles.tabPage, { width }]}>
             <Text style={styles.tabHeader}>Collections</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {cardData.map((item) => (
-                <View key={item.id}>
-                  <BinderCard
-                    image={item.image}
-                    name={item.name}
-                    setName={item.setName}
-                    qty={item.qty}
-                    price={item.price}
-                  />
-                </View>
+              {myBinders.map((binder) => (
+                <ItemDeck 
+                  key={binder.collection_id}
+                  name={binder.name}
+                  collectionId={binder.collection_id}
+                  onPress={() => handleCollectionPress(binder)}
+                  onDelete={() => handleDeleteBinder(binder.collection_id)}
+                />
               ))}
             </View>          
           </View>

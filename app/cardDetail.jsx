@@ -31,25 +31,20 @@ export default function CardDetailPage() {
     if (!card) return;
     
     try {
-      // Add card to owned cards using ownedCardApi
+      // ✅ Use card.domain which now exists
       await ownedCardApi.addOwnedCards(
         card.card_id,
-        card.card_domain_id
+        card.domain  // ✅ This now has a value from Search page
       );
-      console.log("Sending to backend:", {
+      
+      console.log("✅ Sending to backend:", {
         card_id: card.card_id,
-        card_domain_id: card.card_domain_id,
+        domain: card.domain,
       });
 
       Alert.alert('Success', 'Card added to your collection!');
-      console.log('✅ Card added to Owned Cards');
     } catch (error) {
       console.error('❌ Failed to add card:', error);
-      console.log("Sending to backend:", {
-        card_id: card.card_id,
-        card_domain_id: card.card_domain_id,
-      });
-
       Alert.alert('Error', 'Failed to add card to collection');
     }
   };
@@ -58,13 +53,18 @@ export default function CardDetailPage() {
   useEffect(() => {
     const fetchCardDetails = async () => {
       if (passedCard) {
+        // ✅ Card from Search already has domain
         setCard(passedCard);
         setLoading(false);
       } else if (params.card_id) {
         try {
           const response = await cardApi.getCardById(params.card_id);
           if (response.statusCode === 200 && response.metadata) {
-            setCard(response.metadata);
+            // ✅ Add default domain if fetched directly
+            setCard({
+              ...response.metadata,
+              domain: 'ygo', // Default fallback
+            });
           }
         } catch (error) {
           console.error('Failed to load card:', error);
@@ -85,14 +85,19 @@ export default function CardDetailPage() {
         try {
           const response = await cardApi.getMetadataCard(20, 1, '', {
             archetype: card.meta_data.archetype,
+            domain: card.domain, // ✅ Use same domain for related cards
           });
 
           if (response.metadata?.cards) {
-            setRelatedCards(
-              response.metadata.cards.filter(
-                (relCard) => relCard.card_id !== card.card_id
-              )
-            );
+            // ✅ Add domain to related cards too
+            const cardsWithDomain = response.metadata.cards
+              .filter((relCard) => relCard.card_id !== card.card_id)
+              .map((relCard) => ({
+                ...relCard,
+                domain: card.domain, // ✅ Same domain as main card
+              }));
+            
+            setRelatedCards(cardsWithDomain);
           }
         } catch (error) {
           console.error('Failed to load related cards:', error);
@@ -227,7 +232,7 @@ export default function CardDetailPage() {
                   onPress={() =>
                     router.push({
                       pathname: '/cardDetail',
-                      params: { card: JSON.stringify(relCard) },
+                      params: { card: JSON.stringify(relCard) }, // ✅ Has domain
                     })
                   }
                   style={styles.relatedCard}

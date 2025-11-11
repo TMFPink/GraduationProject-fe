@@ -5,11 +5,11 @@ export const ownedCardApi = {
     const response = await baseApi.get(`/owned-cards?page=${page}&limit=${limit}`);
     return convertToMetadata(response);
   },
-  addOwnedCards: async (card_id: any, card_domain_id: any) => {
-    const response = await baseApi.post(`/owned-cards`, { card_id, card_domain_id: "11111111-1111-1111-1111-111111111111"});
+  addOwnedCards: async (card_id: any, domain: any) => {
+    const response = await baseApi.post(`/owned-cards`, { card_id, domain});
     return convertToMetadata(response);
   },
-  getAllOwned: async (card_id: any) => {
+  deleteOwned: async (card_id: any) => {
     const response = await baseApi.delete(`/owned-cards/${card_id}`);
     return convertToMetadata(response);
   }, 

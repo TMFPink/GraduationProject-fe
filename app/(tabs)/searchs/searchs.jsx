@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  ScrollView,
+  Image,
+  Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,6 +23,8 @@ const Search = () => {
   const [searchTimer, setSearchTimer] = useState(null);
   const [activeFilters, setActiveFilters] = useState({});
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [isDomainPickerVisible, setIsDomainPickerVisible] = useState(false); // ✅ Domain picker modal
+  const [selectedDomain, setSelectedDomain] = useState('ygo'); // ✅ Default domain
 
   const [cards, setCards] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,20 +35,72 @@ const Search = () => {
 
   const CARDS_PER_PAGE = 20;
 
-  const loadCards = async (page = 1, append = false, query = '', filters = {}) => {
+  // ✅ Game series with logo URLs
+  const gameSeries = [
+    {
+      id: 1,
+      name: 'Yu-Gi-Oh!',
+      domain: 'ygo',
+      logoUrl: 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png',
+      color: '#8B0000',
+    },
+    {
+      id: 2,
+      name: 'Pokémon',
+      domain: 'pkm',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/640px-International_Pok%C3%A9mon_logo.svg.png',
+      color: '#FFCB05',
+    },
+    {
+      id: 3,
+      name: 'Magic: The Gathering',
+      domain: 'mtg',
+      logoUrl: 'https://www.icomedia.eu/wp-content/uploads/2021/03/MTG_Primary_LL_1c_Black_LG_V12.png',
+      color: '#F15A24',
+    },
+    {
+      id: 4,
+      name: 'Gundam',
+      domain: 'gundam',
+      logoUrl: 'https://travellingman.com/cdn/shop/files/gundam-card-game-newtype-rising-booster-box-gd01-499905_1200x1200.webp?v=1756386542',
+      color: '#1a1a1a',
+    },
+    {
+      id: 5,
+      name: 'Riftbound',
+      domain: 'riftbound',
+      logoUrl: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/23d41c7809a48a013f3d8a7204b81fb4d8bdb164-10000x4389.png?auto=format&fit=fill&q=80&w=460',
+      color: '#1a1a1a',
+    },
+  ];
+
+  // ✅ Load cards with domain filter
+  const loadCards = async (page = 1, append = false, query = '', filters = {}, domain = selectedDomain) => {
     if (isLoadingMore && append) return;
     append ? setIsLoadingMore(true) : setIsLoading(true);
 
     try {
+      // ✅ Add domain to filters
+      const filtersWithDomain = {
+        ...filters,
+        domain: domain,
+      };
+
       const response = await cardApi.getMetadataCard(
         query ? 1000 : CARDS_PER_PAGE,
         page,
         query,
-        filters
+        filtersWithDomain
       );
 
       if (response.statusCode === 200 && response.metadata?.cards) {
-        const newCards = response.metadata.cards;
+        // ✅ Add domain to each card
+        const newCards = response.metadata.cards.map(card => ({
+          ...card,
+          domain: domain,
+        }));
+        
+        console.log(`Loaded ${newCards.length} cards for domain: ${domain}`);
         setHasMoreCards(!query && newCards.length === CARDS_PER_PAGE);
         setCards(append ? (prev) => [...prev, ...newCards] : newCards);
       } else {
@@ -88,6 +145,16 @@ const Search = () => {
     performSearch(searchQuery, newFilters);
   };
 
+  // ✅ Handle domain change
+  const handleDomainChange = (game) => {
+    setSelectedDomain(game.domain);
+    setIsDomainPickerVisible(false); // Close picker
+    setCurrentPage(1);
+    setSearchQuery('');
+    setIsSearchMode(false);
+    loadCards(1, false, '', activeFilters, game.domain);
+  };
+
   const loadMore = () => {
     if (!isLoadingMore && hasMoreCards && !isSearchMode) {
       const nextPage = currentPage + 1;
@@ -96,6 +163,7 @@ const Search = () => {
     }
   };
 
+  // ✅ Load cards on mount
   useEffect(() => {
     loadCards(1, false);
   }, []);
@@ -103,7 +171,7 @@ const Search = () => {
   const handleCardPress = (card) => {
     router.navigate({
       pathname: '/cardDetail',
-      params: { card: JSON.stringify(card) },
+      params: { card: JSON.stringify(card) }, // ✅ Card has domain now
     });
   };
 
@@ -142,6 +210,22 @@ const Search = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search Cards</Text>
+
+        {/* ✅ Domain Picker Button */}
+        <TouchableOpacity 
+          style={styles.domainPickerButton}
+          onPress={() => setIsDomainPickerVisible(true)}
+        >
+          <Image 
+            source={{ uri: gameSeries.find(g => g.domain === selectedDomain)?.logoUrl }}
+            style={styles.domainPickerLogo}
+            resizeMode="contain"
+          />
+          {/* <Text style={styles.domainPickerButtonText}>
+            {gameSeries.find(g => g.domain === selectedDomain)?.name}
+          </Text> */}
+          <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
+        </TouchableOpacity>
 
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
@@ -212,12 +296,59 @@ const Search = () => {
         onApply={handleFilterApply}
         defaultFilters={activeFilters}
       />
+
+      {/* ✅ Domain Picker Modal */}
+      <Modal
+        visible={isDomainPickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDomainPickerVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsDomainPickerVisible(false)}
+        >
+          <View style={styles.domainPickerModal}>
+            <View style={styles.domainPickerHeader}>
+              <Text style={styles.domainPickerTitle}>Select Game Series</Text>
+              <TouchableOpacity onPress={() => setIsDomainPickerVisible(false)}>
+                <MaterialCommunityIcons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.domainPickerList}>
+              {gameSeries.map((game) => (
+                <TouchableOpacity
+                  key={game.id}
+                  style={[
+                    styles.domainPickerItem,
+                    selectedDomain === game.domain && styles.domainPickerItemActive,
+                  ]}
+                  onPress={() => handleDomainChange(game)}
+                >
+                  <Image 
+                    source={{ uri: game.logoUrl }}
+                    style={styles.domainPickerItemLogo}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.domainPickerItemTextContainer}>
+                    <Text style={styles.domainPickerItemName}>{game.name}</Text>
+                  </View>
+                  {selectedDomain === game.domain && (
+                    <MaterialCommunityIcons name="check-circle" size={24} color="#10B981" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 export default Search;
-
 
 const styles = StyleSheet.create({
   container: {
@@ -242,6 +373,97 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 16,
+  },
+  // ✅ Domain Picker Button Styles
+  domainPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    // borderRadius: 12,
+    // borderWidth: 1.5,
+    // borderColor: '#E5E7EB',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 12,
+  },
+  domainPickerLogo: {
+    width: '100%',
+    height: 100,
+  },
+  domainPickerButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  // ✅ Domain Picker Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  domainPickerModal: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '70%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  domainPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  domainPickerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  domainPickerList: {
+    padding: 16,
+  },
+  domainPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  domainPickerItemActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  domainPickerItemLogo: {
+    width: 50,
+    height: 50,
+    marginRight: 16,
+  },
+  domainPickerItemTextContainer: {
+    flex: 1,
+  },
+  domainPickerItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  domainPickerItemDomain: {
+    fontSize: 12,
+    color: '#6B7280',
   },
   searchRow: {
     flexDirection: 'row',
@@ -301,25 +523,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  resultsInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  resultsText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  clearFiltersText: {
-    fontSize: 14,
-    color: '#EA6C5D',
-    fontWeight: '600',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -334,7 +537,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 16, // fixed spacing between cards
+    gap: 16,
     paddingHorizontal: 12,
     paddingTop: 16,
     paddingBottom: 100,
