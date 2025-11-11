@@ -89,26 +89,31 @@ useFocusEffect(
     setFacing((cur) => (cur === "back" ? "front" : "back"));
 
   const detectCards = async (imageUri: string): Promise<CardDetectionResponse | null> => {
-    try {
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-      const formData = new FormData();
-      formData.append("file", blob as any, "card_image.jpg");
-      formData.append("domain", "ygo");
+  try {
+    const formData = new FormData();
+    formData.append("file", {
+      uri: imageUri,
+      name: "card_image.jpg",
+      type: "image/jpeg",
+    } as any);
+    formData.append("domain", "ygo");
 
-      const res = await fetch("http://localhost:3000/v1/card-detection", {
-        method: "POST",
-        body: formData,
-      });
+    const res = await fetch("http://localhost:3000/v1/card-detection", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
-      const data: CardDetectionResponse = await res.json();
-      console.log("✅ Response:", data);
-      return data;
-    } catch (error) {
-      console.error("❌ detectCards error:", error);
-      return null;
-    }
-  };
+    const data: CardDetectionResponse = await res.json();
+    console.log("✅ Response:", data);
+    return data;
+  } catch (error) {
+    console.error("❌ detectCards error:", error);
+    return null;
+  }
+};
 
 const takePicture = async () => {
   if (!cameraRef.current || isCapturing) return;
