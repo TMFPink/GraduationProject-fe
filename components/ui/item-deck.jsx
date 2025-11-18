@@ -25,6 +25,8 @@ const ItemDeck = ({ name, image, isCreateNew, onPress }) => {
           )}
         </View>
 
+
+        
         <Text style={styles.deckName} numberOfLines={2}>
           {name}
         </Text>

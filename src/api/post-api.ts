@@ -31,7 +31,7 @@ export const postApi = {
 
     getPostsByUserId: async (userId: string, limit = 20, page = 1) => {
         const params: any = { limit, page };
-        const response = await baseApi.get(`/users/${userId}/posts`, { params });
+        const response = await baseApi.get(`/posts/user/${userId}`, { params });
         return convertToMetadata(response);
     },  
 

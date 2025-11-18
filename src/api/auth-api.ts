@@ -30,4 +30,20 @@ export const authApi = {
     const response = await baseApi.get<ApiResponse<User[]>>("/users");
     return response.data;
   },
+
+
+
+  // === Update current user profile ===
+  async updateProfile(profileData: {
+    avatar?: any;  // Base64 string or file (binary)
+    first_name?: any;
+    last_name?: any;
+    email?: any;
+    phone_number?: any;
+  }) {
+    const response = await baseApi.put('/users/me', profileData);
+    const metadata = convertToMetadata(response);
+    
+    return metadata;
+  }
 };

@@ -65,7 +65,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="userpage"
         options={{
           headerShown: false,
           title: 'Profile',

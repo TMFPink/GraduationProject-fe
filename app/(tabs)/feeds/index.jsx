@@ -186,11 +186,11 @@ export default function FeedsScreen() {
 
   // Navigation handlers
   const handleChatPress = () => {
-    router.navigate('/(tabs)/feeds/chat');
+    router.push('/(tabs)/feeds/chat');
   };
 
   const handleCreatePost = () => {
-    router.navigate('/(tabs)/feeds/createPost');
+    router.push('/(tabs)/feeds/createPost');
   };
 
   // Render functions

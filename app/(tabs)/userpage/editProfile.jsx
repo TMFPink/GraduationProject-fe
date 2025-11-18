@@ -1,0 +1,309 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/src/contexts/auth-context';
+import { authApi } from '@/src/api/auth-api';
+// import * as ImagePicker from 'expo-image-picker';
+
+const EditProfileScreen = () => {
+  const router = useRouter();
+  const { user, setCurrentUser } = useAuth();
+
+  // Form states
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [avatarUri, setAvatarUri] = useState('');
+  const [avatarBase64, setAvatarBase64] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+
+  // Initialize form
+  useEffect(() => {
+    if (user) {
+      const nameParts = user.name?.split(' ') || [];
+
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
+      setEmail(user.email || '');
+      setPhoneNumber(user.phone_number || '');
+      setAvatarUri(user.avatar_url || '');
+
+      setInitializing(false);
+    }
+  }, [user]);
+
+  const handleBack = () => router.back();
+
+  const handlePickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        return Alert.alert('Permission Required', 'Please allow gallery access.');
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+        setAvatarBase64(result.assets[0].base64 || '');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to pick image.');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        return Alert.alert('Permission Required', 'Please allow camera access.');
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+        setAvatarBase64(result.assets[0].base64 || '');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to take photo.');
+    }
+  };
+
+  const handleEditAvatar = () => {
+    Alert.alert('Change Avatar', 'Choose an option', [
+      { text: 'Take Photo', onPress: handleTakePhoto },
+      { text: 'Choose from Library', onPress: handlePickImage },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleSave = async () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      return Alert.alert('Validation Error', 'First name, last name, and email are required.');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return Alert.alert('Validation Error', 'Please enter a valid email.');
+    }
+
+    try {
+      setLoading(true);
+
+      const updateData = {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.trim(),
+      };
+
+      if (phoneNumber.trim()) updateData.phone_number = phoneNumber.trim();
+      if (avatarBase64) updateData.avatar = avatarBase64;
+
+      await authApi.updateProfile(updateData);
+
+      const updatedUser = await authApi.getCurrentUser();
+      setCurrentUser(updatedUser.metadata);
+
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to update profile.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (initializing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack}>
+          <Text style={styles.backButton}>{'< Edit Profile'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Cover */}
+        <View style={styles.coverContainer}>
+          <View style={styles.coverPlaceholder} />
+        </View>
+
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatar} />
+          )}
+          <TouchableOpacity style={styles.editAvatarButton} onPress={handleEditAvatar}>
+            <Text style={styles.editIcon}>✏️</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>First Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={firstName}
+              onChangeText={setFirstName}
+              autoCapitalize="words"
+              placeholder="Enter first name"
+            />
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Last Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+              placeholder="Enter last name"
+            />
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Enter email"
+            />
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              placeholder="Enter phone number (optional)"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#666" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: { fontSize: 16, fontWeight: '600' },
+  coverContainer: { width: '100%', height: 180 },
+  coverPlaceholder: { flex: 1, backgroundColor: '#E08B7E' },
+  avatarContainer: {
+    marginTop: -40,
+    marginLeft: 16,
+    width: 80,
+    height: 80,
+    position: 'relative',
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    borderColor: '#fff',
+    backgroundColor: '#C5C5C5',
+  },
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#C5C5C5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderColor: '#fff',
+    borderWidth: 2,
+  },
+  editIcon: { fontSize: 18 },
+  formContainer: { padding: 16, marginTop: 20 },
+  fieldContainer: { marginBottom: 24 },
+  label: { fontSize: 14, marginBottom: 8, color: '#666' },
+  input: {
+    fontSize: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingVertical: 8,
+  },
+  saveButton: {
+    backgroundColor: '#000',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  saveButtonDisabled: { backgroundColor: '#999' },
+  saveButtonText: { fontSize: 16, color: '#fff', fontWeight: '600' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+});
+
+export default EditProfileScreen;

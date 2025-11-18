@@ -38,18 +38,7 @@ export default function CreatePostScreen() {
   const [showTitleInput, setShowTitleInput] = useState(false);
 
   const handleClose = () => {
-    if (content.trim() || title.trim()) {
-      Alert.alert(
-        'Discard Post?',
-        'Are you sure you want to discard this post?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => router.back() },
-        ]
-      );
-    } else {
-      router.back();
-    }
+    router.back();
   };
 
   const handlePost = async () => {
@@ -99,15 +88,8 @@ export default function CreatePostScreen() {
       if (response && response.metadata && response.metadata.post_id) {
         console.log('Post created successfully:', response.metadata);
         
-        Alert.alert('Success', 'Your post has been created!', [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              // Navigate back and the feeds will refresh automatically
-              router.navigate('(tabs)/feeds/index');
-            }
-          }
-        ]);
+        // Navigate back to feeds
+        router.navigate('(tabs)/feeds/index');
       } else if (response && response.message && !response.metadata) {
         // API returned an error message
         throw new Error(response.message);
