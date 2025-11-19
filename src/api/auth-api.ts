@@ -34,16 +34,18 @@ export const authApi = {
 
 
   // === Update current user profile ===
-  async updateProfile(profileData: {
-    avatar?: any;  // Base64 string or file (binary)
-    first_name?: any;
-    last_name?: any;
-    email?: any;
-    phone_number?: any;
-  }) {
-    const response = await baseApi.put('/users/me', profileData);
-    const metadata = convertToMetadata(response);
-    
-    return metadata;
-  }
+async updateProfile(profileData: {
+  username?: string;
+  userTag?: string;
+  email?: string;
+  phone_number?: string;
+  avatar?: string;  // Binary format
+  cover?: string;   // Binary format
+}) {
+  const response = await baseApi.put('/users/me', profileData);
+  const metadata = convertToMetadata(response);
+  
+  // Response structure: { message, metadata: { user_id, username, email, avatar_url, cover_url, ... } }
+  return metadata;
+}
 };

@@ -35,13 +35,13 @@ export default function ChatListScreen() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   const filteredChats = chatList.filter(chat =>
-    chat.first_name.toLowerCase().includes(searchText.toLowerCase()) ||
+    chat.username.toLowerCase().includes(searchText.toLowerCase()) ||
     chat.last_message.toLowerCase().includes(searchText.toLowerCase())
   );
 
 
   const handleChatPress = (chat: ChatSummary) => {
-    const fullName = chat.last_name ? `${chat.first_name} ${chat.last_name}` : chat.first_name;
+    const fullName = chat.username;
     router.push(`/(tabs)/feeds/chat/${chat.user_id}?userName=${encodeURIComponent(fullName)}` as any);
   };
 

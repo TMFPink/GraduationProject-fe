@@ -9,8 +9,12 @@ export interface LoginResponse {
 
 export interface User {
   user_id: string;
-  name: string;
+  username: string;
+  userTag: string;
   email: string;
   phone_number: string;
   role_id: string;
+  is_active: any;
+  avatar_url: any;
+  cover_url: any;
 }

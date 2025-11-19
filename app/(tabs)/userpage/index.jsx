@@ -188,13 +188,13 @@ import { navigate } from "expo-router/build/global-state/routing";
           {/* Info */}
           <View style={styles.infoContainer}>
             <View style={styles.nameRow}>
-              <Text style={styles.username}>{user?.name || 'Username'}</Text>
+              <Text style={styles.username}>{user?.username}</Text>
               <View style={styles.levelTag}>
                 <Text style={styles.levelText}>Lv. {user?.level || 36}</Text>
               </View>
             </View>
 
-            <Text style={styles.userTag}>@{user?.name || 'username_xyz'}</Text>
+            <Text style={styles.userTag}>@{user?.userTag}</Text>
             <Text style={styles.bio}>{user?.bio || 'No bio yet'}</Text>
             {user?.website && (
               <Text style={styles.link}>{user.website}</Text>
