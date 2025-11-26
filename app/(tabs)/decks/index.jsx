@@ -1,33 +1,46 @@
+// DeckPage.jsx
 import { router } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { gameSeries } from '@/constants/gameSeries'; // ✅ Import shared config
 
 const DeckPage = () => {
-  const series = [
-    { id: 1, name: 'Yu-Gi-Oh!', color: '#8B0000' },
-    { id: 2, name: 'Pokémon', color: '#FFCB05' },
-    { id: 3, name: 'Magic: The Gathering', color: '#F15A24' },
-    { id: 4, name: 'Gundam Card Game', color: '#1a1a1a' },
-  ];
-
-  const navigateToDeckList = () => {
-    router.push('/decks/deckList');
-  };
+  // ✅ Pass selected series domain to DeckListPage
+  const navigateToDeckList = (series) => {
+  // 🐛 DEBUG: Log what we're sending
+  console.log('=== DeckPage Debug ===');
+  console.log('Selected series:', series);
+  console.log('Sending seriesDomain:', series.domain); // Should be 'domain' not 'card_type'
+  
+  router.push({
+    pathname: '/decks/deckList',
+    params: { 
+      seriesDomain: series.domain,  // ✅ CHANGE back to series.domain
+      seriesName: series.name,
+      seriesLogo: series.logoUrl,
+    }
+  });
+};
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Deck</Text>
-        <Text style={styles.subtitle}>Series</Text>
-
+        <Text style={styles.subtitle}>Choose a series to manage your decks</Text>
+        
         <View style={styles.seriesList}>
-          {series.map((item) => (
+          {gameSeries.map((series) => (
             <TouchableOpacity
-              key={item.id}
-              onPress={navigateToDeckList}
-              style={[styles.seriesCard, { backgroundColor: item.color }]}
+              key={series.id}
+              onPress={() => navigateToDeckList(series)} // ✅ Pass series object
+              style={[styles.seriesCard, { backgroundColor: series.color }]}
             >
-              <Text style={styles.seriesName}>{item.name}</Text>
+              {/* ✅ Show logo */}
+              <Image 
+                source={{ uri: series.logoUrl }} 
+                style={styles.seriesLogo}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           ))}
         </View>
@@ -69,13 +82,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 16,
+    padding: 16,
   },
-  seriesName: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    paddingHorizontal: 16,
+  seriesLogo: {
+    width: '80%',
+    height: '80%',
   },
 });
 

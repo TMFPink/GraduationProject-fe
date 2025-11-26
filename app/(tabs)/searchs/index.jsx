@@ -23,8 +23,8 @@ const Search = () => {
   const [searchTimer, setSearchTimer] = useState(null);
   const [activeFilters, setActiveFilters] = useState({});
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
-  const [isDomainPickerVisible, setIsDomainPickerVisible] = useState(false); // ✅ Domain picker modal
-  const [selectedDomain, setSelectedDomain] = useState('ygo'); // ✅ Default domain
+  const [isDomainPickerVisible, setIsDomainPickerVisible] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState('ygo');
 
   const [cards, setCards] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,7 +35,6 @@ const Search = () => {
 
   const CARDS_PER_PAGE = 20;
 
-  // ✅ Game series with logo URLs
   const gameSeries = [
     {
       id: 1,
@@ -48,7 +47,7 @@ const Search = () => {
       id: 2,
       name: 'Pokémon',
       domain: 'pkm',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/640px-International_Pok%C3%A9mon_logo.svg.png',
+      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/640px-International_Pokémon_logo.svg.png',
       color: '#FFCB05',
     },
     {
@@ -74,13 +73,11 @@ const Search = () => {
     },
   ];
 
-  // ✅ Load cards with domain filter
   const loadCards = async (page = 1, append = false, query = '', filters = {}, domain = selectedDomain) => {
     if (isLoadingMore && append) return;
     append ? setIsLoadingMore(true) : setIsLoading(true);
 
     try {
-      // ✅ Add domain to filters
       const filtersWithDomain = {
         ...filters,
         domain: domain,
@@ -94,7 +91,6 @@ const Search = () => {
       );
 
       if (response.statusCode === 200 && response.metadata?.cards) {
-        // ✅ Add domain to each card
         const newCards = response.metadata.cards.map(card => ({
           ...card,
           domain: domain,
@@ -145,10 +141,9 @@ const Search = () => {
     performSearch(searchQuery, newFilters);
   };
 
-  // ✅ Handle domain change
   const handleDomainChange = (game) => {
     setSelectedDomain(game.domain);
-    setIsDomainPickerVisible(false); // Close picker
+    setIsDomainPickerVisible(false);
     setCurrentPage(1);
     setSearchQuery('');
     setIsSearchMode(false);
@@ -163,7 +158,6 @@ const Search = () => {
     }
   };
 
-  // ✅ Load cards on mount
   useEffect(() => {
     loadCards(1, false);
   }, []);
@@ -171,7 +165,7 @@ const Search = () => {
   const handleCardPress = (card) => {
     router.navigate({
       pathname: '/cardDetail',
-      params: { card: JSON.stringify(card) }, // ✅ Card has domain now
+      params: { card: JSON.stringify(card) },
     });
   };
 
@@ -211,7 +205,6 @@ const Search = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search Cards</Text>
 
-        {/* ✅ Domain Picker Button */}
         <TouchableOpacity 
           style={styles.domainPickerButton}
           onPress={() => setIsDomainPickerVisible(true)}
@@ -221,9 +214,6 @@ const Search = () => {
             style={styles.domainPickerLogo}
             resizeMode="contain"
           />
-          {/* <Text style={styles.domainPickerButtonText}>
-            {gameSeries.find(g => g.domain === selectedDomain)?.name}
-          </Text> */}
           <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
 
@@ -244,7 +234,11 @@ const Search = () => {
             ) : null}
           </View>
 
-          <TouchableOpacity style={styles.iconButton}>
+          {/* ✅ SCAN BUTTON FIXED HERE */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.navigate('/(tabs)/searchs/cameraScan')}   // ✅ Navigate to cameraScan
+          >
             <MaterialCommunityIcons name="qrcode-scan" size={24} color="#EA6C5D" />
           </TouchableOpacity>
 
@@ -297,7 +291,6 @@ const Search = () => {
         defaultFilters={activeFilters}
       />
 
-      {/* ✅ Domain Picker Modal */}
       <Modal
         visible={isDomainPickerVisible}
         transparent={true}
@@ -374,14 +367,10 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
-  // ✅ Domain Picker Button Styles
   domainPickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    // borderRadius: 12,
-    // borderWidth: 1.5,
-    // borderColor: '#E5E7EB',
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -397,7 +386,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
-  // ✅ Domain Picker Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -460,10 +448,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
-  },
-  domainPickerItemDomain: {
-    fontSize: 12,
-    color: '#6B7280',
   },
   searchRow: {
     flexDirection: 'row',
