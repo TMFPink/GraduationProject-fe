@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { 
   StyleSheet, View, Text, TouchableOpacity, 
-  ScrollView, TextInput, Image, ActivityIndicator, Alert  
+  ScrollView, TextInput, Image, ActivityIndicator, Alert, Modal  
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import ItemDeck from '../../../components/ui/item-deck';
 import { collectionApi } from '@/src/api/collection-api';
@@ -16,7 +17,11 @@ const CollectionPage = () => {
   const [myBinders, setMyBinders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-
+  // ✅ Multi-select delete states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedBinders, setSelectedBinders] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Fetch owned cards and collections
   const fetchData = async () => {
@@ -32,7 +37,7 @@ const CollectionPage = () => {
       const collectionsResponse = await collectionApi.getAllCollection(1, 100);
       const collections = collectionsResponse.metadata?.collections || collectionsResponse.collections || [];
       
-      // Filter out any "Owned Cards" collection if it exists (we don't need it anymore)
+      // Filter out any "Owned Cards" collection if it exists
       const binders = collections.filter(col => col.name !== "Owned Cards");
       setMyBinders(binders);
       
@@ -54,6 +59,64 @@ const CollectionPage = () => {
       fetchData();
     }, [])
   );
+
+  // ✅ Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditMode) {
+      // Exit edit mode - clear selections
+      setSelectedBinders(new Set());
+    }
+    setIsEditMode(!isEditMode);
+  };
+
+  // ✅ Toggle binder selection
+  const toggleBinderSelection = (binderId) => {
+    setSelectedBinders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(binderId)) {
+        newSet.delete(binderId);
+      } else {
+        newSet.add(binderId);
+      }
+      return newSet;
+    });
+  };
+
+  // ✅ Handle delete selected binders
+  const handleDeleteSelected = () => {
+    if (selectedBinders.size === 0) {
+      Alert.alert('No Selection', 'Please select binders to delete.');
+      return;
+    }
+    setShowDeleteModal(true);
+  };
+
+  // ✅ Confirm and execute deletion
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    setIsDeleting(true);
+
+    try {
+      // Delete all selected binders
+      await Promise.all(
+        Array.from(selectedBinders).map(binderId => collectionApi.deleteCollection(binderId))
+      );
+
+      // Remove deleted binders from state
+      setMyBinders(prev => prev.filter(binder => !selectedBinders.has(binder.collection_id)));
+      
+      // Exit edit mode
+      setIsEditMode(false);
+      setSelectedBinders(new Set());
+
+      Alert.alert('Success', `${selectedBinders.size} binder(s) deleted successfully.`);
+    } catch (error) {
+      console.error('Delete failed:', error);
+      Alert.alert('Error', 'Failed to delete some binders.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // === Create new binder ===
   const handleCreateBinder = async () => {
@@ -80,7 +143,7 @@ const CollectionPage = () => {
     }
   };
 
-  // === Delete binder ===
+  // ✅ Single binder delete (when not in edit mode)
   const handleDeleteBinder = async (collectionId) => {
     Alert.alert(
       'Confirm Delete',
@@ -106,12 +169,18 @@ const CollectionPage = () => {
   };
 
   const handleCollectionPress = (binder) => {
-    router.push({ 
-      pathname: '/collections/collectionDetail', 
-      params: { 
-        collectionId: binder.collection_id 
-      } 
-    });
+    if (isEditMode) {
+      // In edit mode - toggle selection
+      toggleBinderSelection(binder.collection_id);
+    } else {
+      // Normal mode - navigate to detail
+      router.push({ 
+        pathname: '/collections/collectionDetail', 
+        params: { 
+          collectionId: binder.collection_id 
+        } 
+      });
+    }
   };
 
   // Filter binders by search
@@ -120,15 +189,15 @@ const CollectionPage = () => {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.content}>
-
-        {/* ===== Header ===== */}
+    <View style={styles.container}>
+      {/* ===== Fixed Header Section ===== */}
+      <View style={styles.fixedHeader}>
+        {/* Header */}
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Collection</Text>
         </View>
 
-        {/* ===== Search Bar ===== */}
+        {/* Search Bar + Edit Button */}
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
@@ -137,13 +206,24 @@ const CollectionPage = () => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          
+          <TouchableOpacity 
+            style={[styles.editButton, isEditMode && styles.editButtonActive]}
+            onPress={toggleEditMode}
+          >
+            <MaterialCommunityIcons 
+              name={isEditMode ? "close" : "trash-can-outline"} 
+              size={22} 
+              color={isEditMode ? "#fff" : "#666"} 
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* ===== Owned Cards Section ===== */}
+        {/* Owned Cards Section */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeaderText}>Owned Cards</Text>
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editText}>View All</Text>
+          <TouchableOpacity style={styles.viewAllButton}>
+            <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.deckContainer, styles.featuredDeckContainer]}>
@@ -165,7 +245,7 @@ const CollectionPage = () => {
               contentContainerStyle={{ paddingVertical: 8 }}
             >
               {ownedCards.map((ownedCard, index) => {
-                const card = ownedCard.Card; // Extract nested Card object
+                const card = ownedCard.Card;
                 return (
                   <TouchableOpacity
                     key={`${card.card_id}-${index}`}
@@ -182,7 +262,6 @@ const CollectionPage = () => {
                       style={styles.ownedCardImage}
                       resizeMode="contain"
                     />
-                    {/* Quantity Badge */}
                     {ownedCard.quantity > 1 && (
                       <View style={styles.quantityBadge}>
                         <Text style={styles.quantityText}>x{ownedCard.quantity}</Text>
@@ -200,31 +279,116 @@ const CollectionPage = () => {
             </ScrollView>
           )}
         </View>
-
-        {/* ===== My Binders ===== */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeaderText}>My Binders</Text>
-        </View>
-
-        <View style={styles.deckGrid}>
-          <ItemDeck 
-            name="Create Binder"
-            isCreateNew={true}
-            onPress={handleCreateBinder}
-          />
-          {filteredBinders.map((binder) => (
-            <ItemDeck 
-              key={binder.collection_id}
-              name={binder.name}
-              collectionId={binder.collection_id}
-              onPress={() => handleCollectionPress(binder)}
-              onDelete={() => handleDeleteBinder(binder.collection_id)}
-            />
-          ))}
-        </View>
-
       </View>
-    </ScrollView>
+
+      {/* ===== Fixed "My Binders" Header ===== */}
+      <View style={styles.fixedBindersHeader}>
+        <Text style={styles.sectionHeaderText}>My Binders</Text>
+      </View>
+
+      {/* ===== Scrollable Binders Section ===== */}
+      <ScrollView 
+        style={styles.scrollableContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.bindersContent}>
+          <View style={styles.deckGrid}>
+            <ItemDeck 
+              name="Create Binder"
+              isCreateNew={true}
+              onPress={handleCreateBinder}
+            />
+            {filteredBinders.map((binder) => (
+              <View key={binder.collection_id} style={styles.binderWrapper}>
+                {/* ✅ Checkbox (only in edit mode) */}
+                {isEditMode && (
+                  <View style={styles.checkboxContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.checkbox,
+                        selectedBinders.has(binder.collection_id) && styles.checkboxSelected
+                      ]}
+                      onPress={() => toggleBinderSelection(binder.collection_id)}
+                    >
+                      {selectedBinders.has(binder.collection_id) && (
+                        <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <ItemDeck 
+                  name={binder.name}
+                  collectionId={binder.collection_id}
+                  onPress={() => handleCollectionPress(binder)}
+                  onDelete={!isEditMode ? () => handleDeleteBinder(binder.collection_id) : undefined}
+                  isEditMode={isEditMode}
+                />
+              </View>
+            ))}
+          </View>
+          <View style={styles.scrollableBottomPadding} />
+        </View>
+      </ScrollView>
+
+      {/* ✅ Delete Selected Button (floating above bottom nav) */}
+      {isEditMode && selectedBinders.size > 0 && (
+        <TouchableOpacity 
+          style={styles.deleteSelectedButton}
+          onPress={handleDeleteSelected}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="trash-can" size={20} color="#fff" />
+              <Text style={styles.deleteSelectedText}>
+                Delete ({selectedBinders.size})
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* ✅ Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#EF4444" />
+            </View>
+            
+            <Text style={styles.modalTitle}>Delete Binders?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete {selectedBinders.size} binder{selectedBinders.size !== 1 ? 's' : ''}?
+              {'\n'}This action cannot be undone.
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonDelete]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.modalButtonTextDelete}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
@@ -234,17 +398,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fafafa',
-    paddingBottom: 80,
   },
-  content: {
+
+  // ===== Fixed Header =====
+  fixedHeader: {
+    backgroundColor: '#fafafa',
     paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingTop: 20,
+    paddingBottom: 12,
+  },
+
+  // ===== Fixed "My Binders" Header =====
+  fixedBindersHeader: {
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+
+    zIndex: 5,
+  },
+
+  // ===== Scrollable Content =====
+  scrollableContent: {
+    flex: 1,
+  },
+  bindersContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  scrollableBottomPadding: {
+    height: 120,
   },
 
   // ===== Header =====
   headerRow: {
-    marginBottom: 24,
+    marginBottom: 18,
   },
   headerTitle: {
     fontSize: 22,
@@ -252,11 +440,15 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
 
-  // ===== Search Bar =====
+  // ✅ Search Bar + Edit Button
   searchRow: {
-    marginBottom: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+    gap: 10,
   },
   searchInput: {
+    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1,
@@ -266,6 +458,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a1a1a',
   },
+  editButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonActive: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
 
   // ===== Section Header =====
   sectionHeaderRow: {
@@ -273,20 +479,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
-    marginTop: 12,
   },
   sectionHeaderText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
-  editButton: {
+  viewAllButton: {
     backgroundColor: '#f0f0f0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  editText: {
+  viewAllText: {
     color: '#333',
     fontSize: 14,
     fontWeight: '500',
@@ -299,7 +504,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     padding: 12,
-    marginBottom: 24,
   },
   featuredDeckContainer: {
     height: 200,
@@ -310,6 +514,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
   },
+
+  // ✅ Binder wrapper with checkbox
+  binderWrapper: {
+    position: 'relative',
+  },
+  checkboxContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 10,
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+
+  // ✅ Delete selected button
+  deleteSelectedButton: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  deleteSelectedText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   // Owned Cards Styling
   ownedCardItem: {
     marginRight: 12,
@@ -347,5 +602,65 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '700',
+  },
+
+  // ✅ Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#f3f4f6',
+  },
+  modalButtonDelete: {
+    backgroundColor: '#EF4444',
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  modalButtonTextDelete: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

@@ -237,7 +237,7 @@ const Search = () => {
           {/* ✅ SCAN BUTTON FIXED HERE */}
           <TouchableOpacity 
             style={styles.iconButton}
-            onPress={() => router.navigate('/(tabs)/searchs/cameraScan')}   // ✅ Navigate to cameraScan
+            onPress={() => router.navigate('/cameraScan')}   // ✅ Navigate to cameraScan
           >
             <MaterialCommunityIcons name="qrcode-scan" size={24} color="#EA6C5D" />
           </TouchableOpacity>

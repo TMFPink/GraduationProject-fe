@@ -3,8 +3,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { 
   StyleSheet, View, Text, TouchableOpacity, ScrollView, 
-  TextInput, Image, ActivityIndicator, Alert 
+  TextInput, Image, ActivityIndicator, Alert, Modal 
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ItemDeck from '../../../components/ui/item-deck';
 import { deckApi } from '@/src/api/deck-api';
 
@@ -17,30 +18,25 @@ const FRONTEND_TO_BACKEND_DOMAIN = {
 
 const DeckListPage = () => {
   const params = useLocalSearchParams();
-  const seriesDomain = params.seriesDomain || 'ygo'; // Frontend: 'ygo', 'pkm', etc.
+  const seriesDomain = params.seriesDomain || 'ygo';
   const seriesName = params.seriesName || 'Yu-Gi-Oh!';
   const seriesLogo = params.seriesLogo || 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png';
-
-  console.log('=== DeckListPage Debug ===');
-  console.log('Received seriesDomain (frontend):', seriesDomain);
-  console.log('Received seriesName:', seriesName);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [allDecks, setAllDecks] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // ✅ Multi-select delete states
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedDecks, setSelectedDecks] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const loadDecks = useCallback(async () => {
     try {
       setLoading(true);
       const response = await deckApi.getAllDecks(1, 100);
       const decks = response.metadata.decks || [];
-      
-      console.log('Total decks fetched:', decks.length);
-      console.log('Decks with domains:', decks.map(d => ({ 
-        name: d.name, 
-        domain: d.domain?.domain 
-      })));
-      
       setAllDecks(decks);
     } catch (error) {
       console.error('Failed to fetch decks:', error);
@@ -54,6 +50,65 @@ const DeckListPage = () => {
     loadDecks();
   }, [loadDecks]);
 
+  // ✅ Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditMode) {
+      // Exit edit mode - clear selections
+      setSelectedDecks(new Set());
+    }
+    setIsEditMode(!isEditMode);
+  };
+
+  // ✅ Toggle deck selection
+  const toggleDeckSelection = (deckId) => {
+    setSelectedDecks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(deckId)) {
+        newSet.delete(deckId);
+      } else {
+        newSet.add(deckId);
+      }
+      return newSet;
+    });
+  };
+
+  // ✅ Handle delete selected decks
+  const handleDeleteSelected = () => {
+    if (selectedDecks.size === 0) {
+      Alert.alert('No Selection', 'Please select decks to delete.');
+      return;
+    }
+    setShowDeleteModal(true);
+  };
+
+  // ✅ Confirm and execute deletion
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    setIsDeleting(true);
+
+    try {
+      // Delete all selected decks
+      await Promise.all(
+        Array.from(selectedDecks).map(deckId => deckApi.deleteDeck(deckId))
+      );
+
+      // Remove deleted decks from state
+      setAllDecks(prev => prev.filter(deck => !selectedDecks.has(deck.deck_id)));
+      
+      // Exit edit mode
+      setIsEditMode(false);
+      setSelectedDecks(new Set());
+
+      Alert.alert('Success', `${selectedDecks.size} deck(s) deleted successfully.`);
+    } catch (error) {
+      console.error('Delete failed:', error);
+      Alert.alert('Error', 'Failed to delete some decks.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // ✅ Single deck delete (when not in edit mode)
   const handleDelete = async (deckId) => {
     Alert.alert(
       'Confirm Delete',
@@ -79,21 +134,17 @@ const DeckListPage = () => {
 
   const handleCreateDeck = async () => {
     try {
-      // ✅ Send card_type in the format your API expects
       const defaultDeck = {
         name: 'New Deck',
-        card_type: seriesDomain, // ✅ Send 'ygo', 'pkm', 'mtg', etc.
+        card_type: seriesDomain,
         format: 'OCG',
         cards: [],
       };
-
-      console.log('Creating deck with card_type:', seriesDomain);
 
       const response = await deckApi.createDeck(defaultDeck);
       const createdDeck = response?.metadata?.deck;
 
       if (createdDeck && createdDeck.deck_id) {
-        // ✅ Reload decks to get the full deck with domain object
         await loadDecks();
         
         router.navigate({
@@ -103,7 +154,6 @@ const DeckListPage = () => {
           },
         });
       } else {
-        console.error('Unexpected response structure:', response);
         Alert.alert('Error', 'Failed to create new deck.');
       }
     } catch (error) {
@@ -115,39 +165,33 @@ const DeckListPage = () => {
   const handleBack = () => router.navigate('/decks');
   
   const handleDeckPress = (deck) => {
-    router.push({ 
-      pathname: '/decks/deckDetail', 
-      params: { 
-        deckId: deck.deck_id 
-      } 
-    });
+    if (isEditMode) {
+      // In edit mode - toggle selection
+      toggleDeckSelection(deck.deck_id);
+    } else {
+      // Normal mode - navigate to detail
+      router.push({ 
+        pathname: '/decks/deckDetail', 
+        params: { 
+          deckId: deck.deck_id 
+        } 
+      });
+    }
   };
 
-  // ✅ Filter decks by domain.domain (backend format) AND search query
+  // ✅ Filter decks
   const filteredDecks = allDecks.filter(deck => {
-    // Get the backend domain from the deck response
-    const deckDomain = deck.domain?.domain; // "yugioh", "pokemon", "magic"
-    
-    // Map frontend seriesDomain to backend domain for comparison
+    const deckDomain = deck.domain?.domain;
     const expectedDomain = FRONTEND_TO_BACKEND_DOMAIN[seriesDomain] || seriesDomain;
-    
     const matchesSeries = deckDomain === expectedDomain;
     const matchesSearch = deck.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
     return matchesSeries && matchesSearch;
   });
 
-  console.log('Filtering by seriesDomain (frontend):', seriesDomain);
-  console.log('Expected backend domain:', FRONTEND_TO_BACKEND_DOMAIN[seriesDomain]);
-  console.log('Filtered decks count:', filteredDecks.length);
-  console.log('Filtered decks:', filteredDecks.map(d => ({ 
-    name: d.name, 
-    domain: d.domain?.domain 
-  })));
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
+    <View style={styles.container}>
+      {/* ===== Fixed Header Section ===== */}
+      <View style={styles.fixedHeader}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backText}>{'< Deck'}</Text>
         </TouchableOpacity>
@@ -161,6 +205,7 @@ const DeckListPage = () => {
           <Text style={styles.seriesName}>{seriesName}</Text>
         </View>
 
+        {/* ✅ Search + Edit Button */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <TextInput
@@ -171,85 +216,319 @@ const DeckListPage = () => {
               placeholderTextColor="#999"
             />
           </View>
-        </View>
 
-        {loading ? (
-          <ActivityIndicator size="large" color="#555" style={{ marginTop: 50 }} />
-        ) : (
-          <>
-            <Text style={styles.deckCount}>
-              {filteredDecks.length} deck{filteredDecks.length !== 1 ? 's' : ''} found
+          {/* ✅ Edit/Delete Mode Button */}
+          <TouchableOpacity 
+            style={[styles.editButton, isEditMode && styles.editButtonActive]}
+            onPress={toggleEditMode}
+          >
+            <MaterialCommunityIcons 
+              name={isEditMode ? "close" : "trash-can-outline"} 
+              size={22} 
+              color={isEditMode ? "#fff" : "#666"} 
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ===== Fixed "Decks" Header ===== */}
+      <View style={styles.fixedDecksHeader}>
+        <Text style={styles.deckCountText}>
+          {loading ? '0' : filteredDecks.length} deck{filteredDecks.length !== 1 ? 's' : ''} found
+        </Text>
+      </View>
+
+      {/* ===== Scrollable Decks Section ===== */}
+      <ScrollView 
+        style={styles.scrollableContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.decksContent}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#555" />
+            </View>
+          ) : (
+            <>
+              <View style={styles.deckGrid}>
+                <ItemDeck 
+                  name="Create Deck"
+                  isCreateNew={true}
+                  onPress={handleCreateDeck}
+                />
+
+                {filteredDecks.map((deck) => (
+                  <View key={deck.deck_id} style={styles.deckWrapper}>
+                    {/* ✅ Checkbox (only in edit mode) */}
+                    {isEditMode && (
+                      <View style={styles.checkboxContainer}>
+                        <TouchableOpacity
+                          style={[
+                            styles.checkbox,
+                            selectedDecks.has(deck.deck_id) && styles.checkboxSelected
+                          ]}
+                          onPress={() => toggleDeckSelection(deck.deck_id)}
+                        >
+                          {selectedDecks.has(deck.deck_id) && (
+                            <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    <ItemDeck
+                      name={deck.name}
+                      image={'https://images.ygoprodeck.com/images/cards/46986414.jpg'}
+                      onPress={() => handleDeckPress(deck)}
+                      onDelete={!isEditMode ? () => handleDelete(deck.deck_id) : undefined}
+                      isEditMode={isEditMode}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {filteredDecks.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>
+                    {searchQuery 
+                      ? `No decks found matching "${searchQuery}"`
+                      : `No ${seriesName} decks yet. Create one to get started!`
+                    }
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          <View style={styles.scrollableBottomPadding} />
+        </View>
+      </ScrollView>
+
+      {/* ✅ Delete Selected Button (floating above bottom nav) */}
+      {isEditMode && selectedDecks.size > 0 && (
+        <TouchableOpacity 
+          style={styles.deleteSelectedButton}
+          onPress={handleDeleteSelected}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="trash-can" size={20} color="#fff" />
+              <Text style={styles.deleteSelectedText}>
+                Delete ({selectedDecks.size})
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* ✅ Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#EF4444" />
+            </View>
+            
+            <Text style={styles.modalTitle}>Delete Decks?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to delete {selectedDecks.size} deck{selectedDecks.size !== 1 ? 's' : ''}?
+              {'\n'}This action cannot be undone.
             </Text>
 
-            <View style={styles.deckGrid}>
-              <ItemDeck 
-                name="Create Deck"
-                isCreateNew={true}
-                onPress={handleCreateDeck}
-              />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
 
-              {filteredDecks.map((deck) => (
-                <ItemDeck
-                  key={deck.deck_id}
-                  name={deck.name}
-                  image={'https://images.ygoprodeck.com/images/cards/46986414.jpg'}
-                  onPress={() => handleDeckPress(deck)}
-                  onDelete={() => handleDelete(deck.deck_id)}
-                />
-              ))}
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonDelete]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.modalButtonTextDelete}>Delete</Text>
+              </TouchableOpacity>
             </View>
-
-            {filteredDecks.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  {searchQuery 
-                    ? `No decks found matching "${searchQuery}"`
-                    : `No ${seriesName} decks yet. Create one to get started!`
-                  }
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
-    </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 20 },
-  backButton: { marginBottom: 20, paddingVertical: 5 },
-  backText: { fontSize: 18, fontWeight: '600', color: '#1a1a1a' },
-  logoContainer: { alignItems: 'center', marginBottom: 20 },
-  seriesLogo: { width: 200, height: 80, marginBottom: 8 },
-  seriesName: { fontSize: 20, fontWeight: '700', color: '#1a1a1a' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  searchContainer: { 
-    flex: 1, 
-    backgroundColor: 'white', 
-    borderRadius: 8, 
-    borderWidth: 1, 
-    borderColor: '#e0e0e0' 
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  searchInput: { 
-    paddingHorizontal: 16, 
-    paddingVertical: 12, 
-    fontSize: 16, 
-    color: '#1a1a1a' 
+
+  // ===== Fixed Header =====
+  fixedHeader: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-  deckCount: {
+
+  backButton: {
+    marginBottom: 14,
+    paddingVertical: 5,
+  },
+  backText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  seriesLogo: {
+    width: 200,
+    height: 60,
+    marginBottom: 6,
+  },
+  seriesName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchInput: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+
+  // ✅ Edit button
+  editButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonActive: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  },
+
+  // ===== Fixed Decks Header =====
+  fixedDecksHeader: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+
+    zIndex: 5,
+  },
+
+  deckCountText: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 12,
     fontWeight: '500',
   },
-  deckGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'center', 
-    gap: 16 
+
+  // ===== Scrollable Content =====
+  scrollableContent: {
+    flex: 1,
   },
+  decksContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  scrollableBottomPadding: {
+    height: 120,
+  },
+
+  loadingContainer: {
+    marginTop: 50,
+    alignItems: 'center',
+  },
+
+  deckGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+  },
+
+  // ✅ Deck wrapper with checkbox
+  deckWrapper: {
+    position: 'relative',
+  },
+  checkboxContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 10,
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+
+  // ✅ Delete selected button
+  deleteSelectedButton: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  deleteSelectedText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -259,6 +538,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
+  },
+
+  // ✅ Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalHeader: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#f3f4f6',
+  },
+  modalButtonDelete: {
+    backgroundColor: '#EF4444',
+  },
+  modalButtonTextCancel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  modalButtonTextDelete: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 

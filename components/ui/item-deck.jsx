@@ -1,13 +1,17 @@
-// components/DeckCard.jsx
+// components/ui/item-deck.jsx
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 
-const ItemDeck = ({ name, image, isCreateNew, onPress }) => {
+const ItemDeck = ({ name, image, isCreateNew, onPress, onDelete, isEditMode }) => {
   const placeholder =
-    'https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg'; // simple placeholder image
+    'https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg';
 
   return (
-    <TouchableOpacity style={styles.cardContainer} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity 
+      style={styles.cardContainer} 
+      onPress={onPress} 
+      activeOpacity={0.8}
+    >
       <View style={styles.innerCard}>
         <View style={styles.imageContainer}>
           {isCreateNew ? (
@@ -24,8 +28,6 @@ const ItemDeck = ({ name, image, isCreateNew, onPress }) => {
             />
           )}
         </View>
-
-
         
         <Text style={styles.deckName} numberOfLines={2}>
           {name}

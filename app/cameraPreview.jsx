@@ -14,7 +14,7 @@ export default function CameraPreviewScreen() {
 
       if (result?.statusCode === 200) {
         router.navigate({
-          pathname: "/(tabs)/searchs/cameraResult",
+          pathname: "/cameraResult",
           params: {
             uri,
             cards: JSON.stringify(result.metadata.cards),
@@ -22,7 +22,7 @@ export default function CameraPreviewScreen() {
         });
       } else {
         alert("Failed to detect cards");
-        router.navigate("/(tabs)/searchs/cameraScan");
+        router.navigate("/cameraScan");
       }
     };
 
@@ -49,7 +49,7 @@ export default function CameraPreviewScreen() {
         <Text style={{ color: "white", marginTop: 10 }}>Detecting cards...</Text>
 
         <TouchableOpacity
-          onPress={() => router.navigate("/(tabs)/searchs/cameraScan")}
+          onPress={() => router.navigate("/cameraScan")}
           style={{ position: "absolute", top: 40, left: 20 }}
         >
           <Text style={{ color: "white", fontSize: 18 }}>Back</Text>

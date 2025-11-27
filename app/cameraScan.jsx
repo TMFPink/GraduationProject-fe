@@ -27,7 +27,7 @@ export default function CameraScreen() {
 
     if (photo?.uri) {
       router.navigate({
-        pathname: "/(tabs)/searchs/cameraPreview",
+        pathname: "/cameraPreview",
         params: { uri: photo.uri },
       });
     }

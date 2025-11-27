@@ -11,7 +11,7 @@ export default function DetectionResultScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 16, backgroundColor: "white" }}>
-      <TouchableOpacity onPress={() => router.navigate("/(tabs)/searchs/cameraPreview") }>
+      <TouchableOpacity onPress={() => router.navigate("/cameraPreview") }>
         <Text style={{ fontSize: 18 }}>← Back to Preview</Text>
       </TouchableOpacity>
 
@@ -54,7 +54,7 @@ export default function DetectionResultScreen() {
       />
 
       <TouchableOpacity
-        onPress={() => router.navigate("/(tabs)/searchs/cameraScan")}
+        onPress={() => router.navigate("/cameraScan")}
         style={{ marginTop: 20 }}
       >
         <Text style={{ fontSize: 18, textAlign: "center" }}>📷 Retake</Text>
