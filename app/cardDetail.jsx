@@ -79,33 +79,84 @@ export default function CardDetailPage() {
   }, []);
 
   // ✅ Fetch related cards by archetype
-  useEffect(() => {
-    if (card && card.meta_data?.archetype) {
-      const fetchRelatedCards = async () => {
-        try {
+// ✅ Fetch related cards by archetype, name, tags, or colors
+useEffect(() => {
+  if (card && card.meta_data) {
+    const fetchRelatedCards = async () => {
+      try {
+        const meta = card.meta_data;
+        let relatedCardsData = [];
+
+        // === YU-GI-OH: Search by archetype ===
+        if (meta.archetype) {
           const response = await cardApi.getMetadataCard(20, 1, '', {
-            archetype: card.meta_data.archetype,
-            domain: card.domain, // ✅ Use same domain for related cards
+            archetype: meta.archetype,
+            domain: card.domain,
           });
 
           if (response.metadata?.cards) {
-            // ✅ Add domain to related cards too
-            const cardsWithDomain = response.metadata.cards
+            relatedCardsData = response.metadata.cards
               .filter((relCard) => relCard.card_id !== card.card_id)
-              .map((relCard) => ({
-                ...relCard,
-                domain: card.domain, // ✅ Same domain as main card
-              }));
-            
-            setRelatedCards(cardsWithDomain);
+              .map((relCard) => ({ ...relCard, domain: card.domain }));
           }
-        } catch (error) {
-          console.error('Failed to load related cards:', error);
         }
-      };
-      fetchRelatedCards();
-    }
-  }, [card]);
+
+        // === POKEMON: Search by name (extract base name without suffixes) ===
+        else if (card.domain === 'pkm') {
+          // Extract base name (remove "ex", "V", "VMAX", etc.)
+          const baseName = card.name.split(' ')[0];
+
+          const response = await cardApi.getMetadataCard(20, 1, baseName, {
+            domain: card.domain,
+          });
+
+          if (response.metadata?.cards) {
+            relatedCardsData = response.metadata.cards
+              .filter((relCard) => relCard.card_id !== card.card_id)
+              .map((relCard) => ({ ...relCard, domain: card.domain }));
+          }
+        }
+
+        // === RIFTBOUND: Search by tags OR colors ===
+        else if (card.domain === 'rb') {
+          // Try searching by first tag
+          if (meta.tags && meta.tags.length > 0) {
+            const firstTag = meta.tags[0];
+            const response = await cardApi.getMetadataCard(20, 1, firstTag, {
+              domain: card.domain,
+            });
+
+            if (response.metadata?.cards) {
+              relatedCardsData = response.metadata.cards
+                .filter((relCard) => relCard.card_id !== card.card_id)
+                .map((relCard) => ({ ...relCard, domain: card.domain }));
+            }
+          }
+
+          // If no results from tags, try searching by color name
+          if (relatedCardsData.length === 0 && meta.colors && meta.colors.length > 0) {
+            const firstColor = meta.colors[0].name;
+            const response = await cardApi.getMetadataCard(20, 1, firstColor, {
+              domain: card.domain,
+            });
+
+            if (response.metadata?.cards) {
+              relatedCardsData = response.metadata.cards
+                .filter((relCard) => relCard.card_id !== card.card_id)
+                .map((relCard) => ({ ...relCard, domain: card.domain }));
+            }
+          }
+        }
+
+        setRelatedCards(relatedCardsData);
+      } catch (error) {
+        console.error('Failed to load related cards:', error);
+      }
+    };
+
+    fetchRelatedCards();
+  }
+}, [card]);
 
   // ✅ Loading UI
   if (loading) {

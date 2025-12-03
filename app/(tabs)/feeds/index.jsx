@@ -3,7 +3,9 @@ import { ThemedView } from '@/components/themed-view';
 import Posts from '@/components/ui/post';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { authApi } from '@/src/api/auth-api';
 import { postApi } from '@/src/api/post-api';
+import { useAuth } from '@/src/contexts/auth-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -22,6 +24,7 @@ export default function FeedsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   
   // State management
   const [posts, setPosts] = useState([]);
@@ -31,6 +34,39 @@ export default function FeedsScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [userCache, setUserCache] = useState({}); // Cache user data
+
+  // Fetch user data by ID
+  const fetchUserData = async (userId) => {
+    // Check cache first
+    if (userCache[userId]) {
+      return userCache[userId];
+    }
+
+    try {
+      const response = await authApi.getUserById(userId);
+      if (response && response.metadata) {
+        const userData = {
+          username: response.metadata.username,
+          avatar_url: response.metadata.avatar_url,
+        };
+        
+        // Update cache
+        setUserCache(prev => ({
+          ...prev,
+          [userId]: userData
+        }));
+        
+        return userData;
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      return {
+        username: 'Unknown User',
+        avatar_url: null,
+      };
+    }
+  };
 
   // Fetch posts from API
   const fetchPosts = async (pageNum = 1, isRefresh = false) => {
@@ -51,28 +87,35 @@ export default function FeedsScreen() {
         const newPosts = response.metadata.posts;
         console.log('Posts received:', newPosts.length);
         
-        // Transform post data to match your component's expected format
-        const transformedPosts = newPosts.map(post => ({
-          id: post.post_id,
-          authorId: post.user_id,
-          authorName: 'User', // You may need to fetch this separately or include in API
-          title: post.title,
-          content: post.content,
-          thumbnail: post.thumbnail,
-          mediaUrl: post.media_url,
-          tags: post.tags,
-          createdAt: formatDate(post.createdAt),
-          updatedAt: formatDate(post.updatedAt),
-          likesCount: post.upvotes - post.downvotes,
-          upvotes: post.upvotes,
-          downvotes: post.downvotes,
-          commentsCount: 0, // Add if available in your API
-        }));
+        // Fetch user data for each post
+        const postsWithUserData = await Promise.all(
+          newPosts.map(async (post) => {
+            const userData = await fetchUserData(post.user_id);
+            
+            return {
+              id: post.post_id,
+              authorId: post.user_id,
+              authorName: userData.username,
+              authorAvatar: userData.avatar_url,
+              title: post.title,
+              content: post.content,
+              thumbnail: post.thumbnail,
+              mediaUrl: post.media_url,
+              tags: post.tags,
+              createdAt: formatDate(post.createdAt),
+              updatedAt: formatDate(post.updatedAt),
+              likesCount: post.upvotes - post.downvotes,
+              upvotes: post.upvotes,
+              downvotes: post.downvotes,
+              commentsCount: 0, // Add if available in your API
+            };
+          })
+        );
         
         if (isRefresh || pageNum === 1) {
-          setPosts(transformedPosts);
+          setPosts(postsWithUserData);
         } else {
-          setPosts(prevPosts => [...prevPosts, ...transformedPosts]);
+          setPosts(prevPosts => [...prevPosts, ...postsWithUserData]);
         }
         
         // Check if there are more posts to load based on total
@@ -105,7 +148,9 @@ export default function FeedsScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) {
+    if (diffMins < 1) {
+      return 'Just now';
+    } else if (diffMins < 60) {
       return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
     } else if (diffHours < 24) {
       return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
@@ -186,11 +231,11 @@ export default function FeedsScreen() {
 
   // Navigation handlers
   const handleChatPress = () => {
-    router.push('/(tabs)/feeds/chat');
+    router.navigate('/(tabs)/feeds/chat');
   };
 
   const handleCreatePost = () => {
-    router.push('/(tabs)/feeds/createPost');
+    router.navigate('/(tabs)/feeds/createPost');
   };
 
   // Render functions
@@ -200,6 +245,7 @@ export default function FeedsScreen() {
       onUpvote={() => handleUpvote(item.id)}
       onDownvote={() => handleDownvote(item.id)}
       onDelete={() => handleDeletePost(item.id)}
+      currentUserId={currentUser?.user_id}
     />
   );
 

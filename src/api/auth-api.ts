@@ -20,10 +20,10 @@ export const authApi = {
   },
 
   // Get user details by ID
-  getUserById: async (id: string): Promise<ApiResponse<User>> => {
-    const response = await baseApi.get<ApiResponse<User>>(`/users/${id}`);
-    return response.data;
-  },
+getUserById: async (id:any) => {
+  const response = await baseApi.get(`/users/${id}`);
+  return convertToMetadata(response);  // ✅ Correct - consistent with other APIs
+},
 
   // Get all users (admin only)
   getAllUsers: async (): Promise<ApiResponse<User[]>> => {

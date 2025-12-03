@@ -19,7 +19,6 @@
   import ItemDeck from '../../../components/ui/item-deck';
   import { useRouter } from 'expo-router';
   import { useAuth } from '@/src/contexts/auth-context';
-import { navigate } from "expo-router/build/global-state/routing";
 
 
   const TABS = ["Posts", "Portfolio", "Collections"];
@@ -59,30 +58,37 @@ import { navigate } from "expo-router/build/global-state/routing";
     }
 
     // Fetch user posts
-    const fetchUserPosts = async (userId) => {
-      try {
-        setPostsLoading(true);
-        console.log('=== FETCHING USER POSTS ===');
-        console.log('User ID:', userId);
-        
-        // Fetch posts by user ID using the correct API method
-        const response = await postApi.getPostsByUserId(userId, 100, 1);
-        console.log('API Response:', JSON.stringify(response, null, 2));
-        
-        const posts = response.metadata?.posts || [];
-        console.log('Extracted posts:', posts);
-        console.log('Number of posts:', posts.length);
-        
-        setUserPosts(posts);
-      } catch (error) {
-        console.error('Failed to fetch user posts:', error);
-        console.error('Error details:', error.message);
-        console.error('Error response:', error.response?.data);
-        setUserPosts([]);
-      } finally {
-        setPostsLoading(false);
-      }
-    };
+    // Fetch user posts
+const fetchUserPosts = async (userId) => {
+  try {
+    setPostsLoading(true);
+    console.log('=== FETCHING USER POSTS ===');
+    console.log('User ID:', userId);
+    
+    const response = await postApi.getPostsByUserId(userId, 100, 1);
+    console.log('API Response:', JSON.stringify(response, null, 2));
+    
+    const rawPosts = response.metadata?.posts || [];
+    console.log('Extracted posts:', rawPosts);
+    console.log('Number of posts:', rawPosts.length);
+    
+    // Transform posts to include user data
+    const transformedPosts = rawPosts.map(post => ({
+      ...post,
+      authorName: user?.username || 'Unknown User',
+      authorAvatar: user?.avatar_url || null,
+      id: post.post_id,
+      authorId: post.user_id,
+    }));
+    
+    setUserPosts(transformedPosts);
+  } catch (error) {
+    console.error('Failed to fetch user posts:', error);
+    setUserPosts([]);
+  } finally {
+    setPostsLoading(false);
+  }
+};
 
     // Fetch owned cards and collections
     const fetchCollection = async () => {

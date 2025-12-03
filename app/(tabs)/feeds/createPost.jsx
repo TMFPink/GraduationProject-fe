@@ -3,47 +3,79 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { postApi } from '@/src/api/post-api';
+import { useAuth } from '@/src/contexts/auth-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// import * as ImagePicker from 'expo-image-picker'; // Uncomment when you install: npx expo install expo-image-picker
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ScrollView,
   SafeAreaView,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  Animated,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 
 export default function CreatePostScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { user } = useAuth();
+  const richText = useRef();
   
   // Form state
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState('');
-  const [selectedMedia, setSelectedMedia] = useState(null);
-  const [thumbnail, setThumbnail] = useState(null);
   
   // UI state
   const [isPosting, setIsPosting] = useState(false);
   const [showTitleInput, setShowTitleInput] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const animatedToolbarY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      Animated.timing(animatedToolbarY, {
+        toValue: -e.endCoordinates.height,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+      Animated.timing(animatedToolbarY, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleClose = () => {
-    router.back();
+    router.navigate('/feeds');
   };
 
   const handlePost = async () => {
+    // Get HTML content from RichEditor
+    const htmlContent = await richText.current?.getContentHtml();
+    
     // Validation
-    if (!content.trim()) {
+    if (!htmlContent || htmlContent.trim() === '' || htmlContent.trim() === '<p></p>') {
       Alert.alert('Error', 'Please enter some content for your post');
       return;
     }
@@ -59,19 +91,11 @@ export default function CreatePostScreen() {
 
       // Prepare post data - only include fields that have values
       const postData = {
-        content: content.trim(),
+        content: htmlContent,
       };
 
       if (title.trim()) {
         postData.title = title.trim();
-      }
-
-      if (thumbnail) {
-        postData.thumbnail = thumbnail;
-      }
-
-      if (selectedMedia) {
-        postData.media_url = selectedMedia;
       }
 
       if (tagArray.length > 0) {
@@ -88,13 +112,12 @@ export default function CreatePostScreen() {
       if (response && response.metadata && response.metadata.post_id) {
         console.log('Post created successfully:', response.metadata);
         
-        // Navigate back to feeds
-        router.navigate('(tabs)/feeds/index');
+        Alert.alert('Success', 'Post created successfully!', [
+          { text: 'OK', onPress: () => router.navigate('/feeds') }
+        ]);
       } else if (response && response.message && !response.metadata) {
-        // API returned an error message
         throw new Error(response.message);
       } else {
-        // Unexpected response format
         throw new Error('Failed to create post');
       }
     } catch (error) {
@@ -107,43 +130,6 @@ export default function CreatePostScreen() {
       );
     } finally {
       setIsPosting(false);
-    }
-  };
-
-  const handleMediaUpload = async () => {
-    try {
-      // Request permission
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please grant camera roll permissions to upload images.'
-        );
-        return;
-      }
-
-      // Pick image
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        setSelectedMedia(asset.uri);
-        
-        // You can also set thumbnail to the same URI or a different one
-        setThumbnail(asset.uri);
-        
-        // TODO: Upload to your server/cloud storage and get URL
-        console.log('Selected media:', asset.uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -197,21 +183,25 @@ export default function CreatePostScreen() {
             <View style={[styles.headerDivider, { backgroundColor: colors.border }]} />
           </View>
 
-          <ScrollView 
-            style={styles.content} 
-            showsVerticalScrollIndicator={false}
+          <KeyboardAwareScrollView
+            style={styles.content}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            extraScrollHeight={100}
           >
             {/* User Info Card */}
             <View style={[styles.userCard, { backgroundColor: colors.background }]}>
               <View style={styles.userInfo}>
                 <View style={[styles.avatarContainer, { backgroundColor: colors.tint + '40' }]}>
-                  <Ionicons name="person" size={24} color={colors.tint} />
+                  {user?.avatar_url ? (
+                    <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={24} color={colors.tint} />
+                  )}
                 </View>
                 <View style={styles.userDetails}>
                   <ThemedText style={[styles.username, { color: colors.text }]}>
-                    Your Name
+                    {user?.username || 'Your Name'}
                   </ThemedText>
                   <View style={[styles.visibilityBadge, { backgroundColor: colors.tint + '15' }]}>
                     <Ionicons name="globe-outline" size={12} color={colors.tint} />
@@ -248,16 +238,26 @@ export default function CreatePostScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Content Input */}
-            <TextInput
-              style={[styles.textInput, { color: colors.text }]}
-              placeholder="What's on your mind?"
-              placeholderTextColor={colors.muted + '80'}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              autoFocus
-            />
+            {/* Rich Text Editor */}
+            <View style={[styles.editorContainer, { borderColor: colors.border }]}>
+              <RichEditor
+                ref={richText}
+                placeholder="What's on your mind? Use the toolbar below to format your post..."
+                onChange={setContent}
+                editorStyle={{ 
+                  backgroundColor: colors.background,
+                  color: colors.text,
+                  contentCSSText: `
+                    font-size: 16px; 
+                    min-height: 250px; 
+                    padding: 12px;
+                    color: ${colors.text};
+                  ` 
+                }}
+                style={[styles.richEditor, { backgroundColor: colors.background }]}
+                initialHeight={250}
+              />
+            </View>
 
             {/* Tags Input */}
             <View style={[styles.tagsContainer, { backgroundColor: colors.background }]}>
@@ -279,79 +279,46 @@ export default function CreatePostScreen() {
               />
             </View>
 
-            {/* Media Preview */}
-            {selectedMedia ? (
-              <View style={styles.mediaContainer}>
-                <Image source={{ uri: selectedMedia }} style={styles.mediaPreview} />
-                <TouchableOpacity
-                  style={styles.removeMediaButton}
-                  onPress={() => {
-                    setSelectedMedia(null);
-                    setThumbnail(null);
-                  }}
-                >
-                  <View style={[styles.removeMediaIcon, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-                    <Ionicons name="close" size={20} color="white" />
-                  </View>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Media Upload Card */
-              <TouchableOpacity
-                style={[styles.mediaCard, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  borderStyle: 'dashed'
-                }]}
-                onPress={handleMediaUpload}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.mediaIconContainer, { backgroundColor: colors.tint + '15' }]}>
-                  <Ionicons name="image" size={32} color={colors.tint} />
-                </View>
-                <ThemedText style={[styles.mediaTitle, { color: colors.text }]}>
-                  Add photo or video
-                </ThemedText>
-                <ThemedText style={[styles.mediaSubtitle, { color: colors.muted }]}>
-                  Tap to upload from gallery
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
+            {/* Spacer for toolbar */}
+            <View style={{ height: 100 }} />
+          </KeyboardAwareScrollView>
 
-          {/* Bottom Toolbar */}
-          <View style={[styles.toolbar, { 
-            backgroundColor: colors.background,
-            borderTopColor: colors.border 
-          }]}>
-            <View style={styles.toolbarContent}>
-              <ThemedText style={[styles.toolbarLabel, { color: colors.muted }]}>
-                Add to post
-              </ThemedText>
-              <View style={styles.toolbarButtons}>
-                <TouchableOpacity 
-                  style={[styles.toolbarButton, { backgroundColor: colors.tint + '15' }]}
-                  onPress={handleMediaUpload}
-                >
-                  <Ionicons name="image" size={20} color={colors.tint} />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.toolbarButton, { backgroundColor: colors.tint + '15' }]}
-                  onPress={() => setShowTitleInput(true)}
-                >
-                  <Ionicons name="text" size={20} color={colors.tint} />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.toolbarButton, { backgroundColor: colors.tint + '15' }]}
-                  onPress={() => {
-                    // Focus on tags input
-                  }}
-                >
-                  <Ionicons name="pricetag" size={20} color={colors.tint} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          {/* Floating Toolbar */}
+          <Animated.View 
+            style={[
+              styles.toolbarContainer, 
+              { 
+                backgroundColor: colors.background,
+                borderTopColor: colors.border,
+                transform: [{ translateY: animatedToolbarY }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.closeKeyboardButton} 
+              onPress={() => Keyboard.dismiss()}
+            >
+              <ThemedText style={[styles.doneText, { color: colors.tint }]}>Done</ThemedText>
+            </TouchableOpacity>
+            
+            <RichToolbar
+              editor={richText}
+              actions={[
+                actions.setBold,
+                actions.setItalic,
+                actions.setUnderline,
+                actions.insertBulletsList,
+                actions.insertOrderedList,
+                actions.insertLink,
+                actions.heading1,
+                actions.undo,
+                actions.redo,
+              ]}
+              iconTint={colors.text}
+              selectedIconTint={colors.tint}
+              style={[styles.toolbar, { backgroundColor: colors.background }]}
+            />
+          </Animated.View>
         </ThemedView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -426,7 +393,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   userCard: {
     borderRadius: 16,
@@ -449,6 +416,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   userDetails: {
     flex: 1,
@@ -497,13 +470,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderBottomWidth: 1,
   },
-  textInput: {
-    fontSize: 17,
-    lineHeight: 26,
-    minHeight: 140,
-    textAlignVertical: 'top',
+  editorContainer: {
+    borderWidth: 1,
+    borderRadius: 12,
     marginBottom: 20,
-    letterSpacing: 0.2,
+    overflow: 'hidden',
+  },
+  richEditor: {
+    minHeight: 250,
   },
   tagsContainer: {
     borderRadius: 12,
@@ -527,87 +501,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
   },
-  mediaContainer: {
-    position: 'relative',
-    marginBottom: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  mediaPreview: {
-    width: '100%',
-    height: 320,
-    borderRadius: 20,
-  },
-  removeMediaButton: {
+  toolbarContainer: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-  },
-  removeMediaIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mediaCard: {
-    borderRadius: 20,
-    borderWidth: 2,
-    padding: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  mediaIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  mediaTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  mediaSubtitle: {
-    fontSize: 14,
-    letterSpacing: 0.1,
-  },
-  toolbar: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 5,
   },
-  toolbarContent: {
-    gap: 12,
+  closeKeyboardButton: {
+    alignSelf: 'flex-end',
+    padding: 10,
+    marginRight: 10,
   },
-  toolbarLabel: {
-    fontSize: 13,
+  doneText: {
+    fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
-  toolbarButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  toolbarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+  toolbar: {
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
 });
