@@ -13,4 +13,13 @@ export const ownedCardApi = {
     const response = await baseApi.delete(`/owned-cards/${card_id}`);
     return convertToMetadata(response);
   }, 
+
+  getFeaturedCards: async () => {
+    const response = await baseApi.get(`/owned-cards/feature`);
+    return convertToMetadata(response);
+  },
+  updateFeatureCards: async (featureCards: Array<{owned_card_id: string, position: number}>) => {
+    const response = await baseApi.put(`/owned-cards/feature`, { feature_cards: featureCards });
+    return convertToMetadata(response);
+  }
 }

@@ -1,4 +1,3 @@
-// screens/DeckListPage.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { 
@@ -257,34 +256,43 @@ const DeckListPage = () => {
                   onPress={handleCreateDeck}
                 />
 
-                {filteredDecks.map((deck) => (
-                  <View key={deck.deck_id} style={styles.deckWrapper}>
-                    {/* ✅ Checkbox (only in edit mode) */}
-                    {isEditMode && (
-                      <View style={styles.checkboxContainer}>
-                        <TouchableOpacity
-                          style={[
-                            styles.checkbox,
-                            selectedDecks.has(deck.deck_id) && styles.checkboxSelected
-                          ]}
-                          onPress={() => toggleDeckSelection(deck.deck_id)}
-                        >
-                          {selectedDecks.has(deck.deck_id) && (
-                            <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    )}
+                {filteredDecks.map((deck) => {
+                  // ✅ Construct the images array from API response
+                  const deckImages = [
+                    deck.first_card_image,
+                    deck.second_card_image,
+                    deck.third_card_image
+                  ].filter(img => img !== null && img !== undefined && img !== '');
 
-                    <ItemDeck
-                      name={deck.name}
-                      image={'https://images.ygoprodeck.com/images/cards/46986414.jpg'}
-                      onPress={() => handleDeckPress(deck)}
-                      onDelete={!isEditMode ? () => handleDelete(deck.deck_id) : undefined}
-                      isEditMode={isEditMode}
-                    />
-                  </View>
-                ))}
+                  return (
+                    <View key={deck.deck_id} style={styles.deckWrapper}>
+                      {/* ✅ Checkbox (only in edit mode) */}
+                      {isEditMode && (
+                        <View style={styles.checkboxContainer}>
+                          <TouchableOpacity
+                            style={[
+                              styles.checkbox,
+                              selectedDecks.has(deck.deck_id) && styles.checkboxSelected
+                            ]}
+                            onPress={() => toggleDeckSelection(deck.deck_id)}
+                          >
+                            {selectedDecks.has(deck.deck_id) && (
+                              <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      <ItemDeck
+                        name={deck.name}
+                        images={deckImages} // ✅ Pass the array of 3 images
+                        onPress={() => handleDeckPress(deck)}
+                        onDelete={!isEditMode ? () => handleDelete(deck.deck_id) : undefined}
+                        isEditMode={isEditMode}
+                      />
+                    </View>
+                  );
+                })}
               </View>
 
               {filteredDecks.length === 0 && (

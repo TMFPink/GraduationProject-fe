@@ -45,6 +45,10 @@ export default function CardDetailPage() {
       Alert.alert('Success', 'Card added to your collection!');
     } catch (error) {
       console.error('❌ Failed to add card:', error);
+      console.log("❌ Failed sending to backend:", {
+        card_id: card.card_id,
+        domain: card.domain,
+      });
       Alert.alert('Error', 'Failed to add card to collection');
     }
   };
@@ -316,6 +320,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 80 },
   imageContainer: {
+    borderRadius:16,
     backgroundColor: '#fff',
     paddingVertical: 20,
     paddingHorizontal: 16,

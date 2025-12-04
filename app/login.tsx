@@ -175,7 +175,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#212121',
   },
   keyboardView: {
     flex: 1,
@@ -192,12 +192,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F2CC0F',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#F2CC0F',
   },
   form: {
     marginBottom: 32,
@@ -208,20 +208,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#F2CC0F',
     marginBottom: 8,
   },
   input: {
     height: 50,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     borderRadius: 8,
     paddingHorizontal: 16,
+    color: '#FFFFFF',
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#212121',
   },
   loginButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#F2CC0F',
     height: 50,
     borderRadius: 8,
     justifyContent: 'center',
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#212121',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   forgotPasswordText: {
-    color: '#3B82F6',
+    color: '#F2CC0F',
     fontSize: 14,
   },
   footer: {
@@ -250,11 +251,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    color: '#6B7280',
+    color: '#ffffffff',
     fontSize: 14,
   },
   signupText: {
-    color: '#3B82F6',
+    color: '#F2CC0F',
     fontSize: 14,
     fontWeight: '600',
   },

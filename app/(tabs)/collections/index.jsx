@@ -1,4 +1,3 @@
-// screens/CollectionPage.jsx
 import React, { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { 
@@ -298,34 +297,57 @@ const CollectionPage = () => {
               isCreateNew={true}
               onPress={handleCreateBinder}
             />
-            {filteredBinders.map((binder) => (
-              <View key={binder.collection_id} style={styles.binderWrapper}>
-                {/* ✅ Checkbox (only in edit mode) */}
-                {isEditMode && (
-                  <View style={styles.checkboxContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.checkbox,
-                        selectedBinders.has(binder.collection_id) && styles.checkboxSelected
-                      ]}
-                      onPress={() => toggleBinderSelection(binder.collection_id)}
-                    >
-                      {selectedBinders.has(binder.collection_id) && (
-                        <MaterialCommunityIcons name="check" size={16} color="#fff" />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
+            {filteredBinders.map((binder) => {
+                // ✅ Construct the images array similar to DeckList
+                // We check for specific fields first, then fallback to 'cards' array if it exists
+                let binderImages = [];
+                
+                if (binder.first_card_image) binderImages.push(binder.first_card_image);
+                if (binder.second_card_image) binderImages.push(binder.second_card_image);
+                if (binder.third_card_image) binderImages.push(binder.third_card_image);
+                
+                // Fallback: if no specific image fields, try to get from cards array
+                if (binderImages.length === 0 && binder.cards && Array.isArray(binder.cards)) {
+                    binderImages = binder.cards
+                        .slice(0, 3)
+                        .map(c => c.image_normal_url || c.image_small_url || c.image);
+                }
 
-                <ItemDeck 
-                  name={binder.name}
-                  collectionId={binder.collection_id}
-                  onPress={() => handleCollectionPress(binder)}
-                  onDelete={!isEditMode ? () => handleDeleteBinder(binder.collection_id) : undefined}
-                  isEditMode={isEditMode}
-                />
-              </View>
-            ))}
+                // Fallback: if legacy single image exists
+                if (binderImages.length === 0 && binder.image) {
+                   binderImages.push(binder.image);
+                }
+
+                return (
+                  <View key={binder.collection_id} style={styles.binderWrapper}>
+                    {/* ✅ Checkbox (only in edit mode) */}
+                    {isEditMode && (
+                      <View style={styles.checkboxContainer}>
+                        <TouchableOpacity
+                          style={[
+                            styles.checkbox,
+                            selectedBinders.has(binder.collection_id) && styles.checkboxSelected
+                          ]}
+                          onPress={() => toggleBinderSelection(binder.collection_id)}
+                        >
+                          {selectedBinders.has(binder.collection_id) && (
+                            <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    <ItemDeck 
+                      name={binder.name}
+                      images={binderImages} // ✅ Pass the array of images for the effect
+                      collectionId={binder.collection_id}
+                      onPress={() => handleCollectionPress(binder)}
+                      onDelete={!isEditMode ? () => handleDeleteBinder(binder.collection_id) : undefined}
+                      isEditMode={isEditMode}
+                    />
+                  </View>
+                );
+            })}
           </View>
           <View style={styles.scrollableBottomPadding} />
         </View>
