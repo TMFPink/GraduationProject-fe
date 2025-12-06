@@ -14,8 +14,22 @@ export const postApi = {
         const response = await baseApi.get("/posts", { params });
         return convertToMetadata(response);
     },
+// ✅ UPDATED FUNCTION
     createPost: async (postData: any) => {
-        const response = await baseApi.post("/posts", postData);
+        // Detect if we are sending FormData (Image upload) or JSON
+        const isFormData = postData instanceof FormData;
+
+        const config = isFormData ? {
+            headers: { 
+                // Explicitly set multipart for FormData
+                'Content-Type': 'multipart/form-data',
+            },
+            // CRITICAL: Prevent Axios from trying to stringify the FormData
+            transformRequest: (data: any) => data, 
+        } : {};
+
+        // Pass the config as the 3rd argument
+        const response = await baseApi.post("/posts", postData, config);
         return convertToMetadata(response);
     },
 

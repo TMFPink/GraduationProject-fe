@@ -605,8 +605,10 @@ const loadMore = () => {
    Styles
    -------------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, marginBottom: 70, backgroundColor: '#f5f5f5' },
-  content: { padding: 20 },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  content: { paddingHorizontal: 20
+, paddingTop: 50
+  },
   center: { justifyContent: 'center', alignItems: 'center' },
 
   /* Header */

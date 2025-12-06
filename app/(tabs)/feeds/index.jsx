@@ -104,10 +104,10 @@ export default function FeedsScreen() {
               tags: post.tags,
               createdAt: formatDate(post.createdAt),
               updatedAt: formatDate(post.updatedAt),
+              upvotes: post.upvotes,        // ✅ ADD THIS
+              downvotes: post.downvotes,    // ✅ ADD THIS
               likesCount: post.upvotes - post.downvotes,
-              upvotes: post.upvotes,
-              downvotes: post.downvotes,
-              commentsCount: 0, // Add if available in your API
+              commentsCount: 0,
             };
           })
         );
@@ -180,16 +180,21 @@ export default function FeedsScreen() {
     }
   }, [loadingMore, hasMore, loading, page]);
 
-  // Handle post actions
-  const handleUpvote = async (postId) => {
+const handleUpvote = async (postId) => {
     try {
       const response = await postApi.upvotePost(postId);
-      if (response.success) {
-        // Update the post in the list
+      
+      // Use the API response to update the post data
+      if (response && response.metadata) {
         setPosts(prevPosts =>
           prevPosts.map(post =>
             post.id === postId
-              ? { ...post, likesCount: (post.likesCount || 0) + 1 }
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  likesCount: response.metadata.upvotes - response.metadata.downvotes
+                }
               : post
           )
         );
@@ -202,12 +207,18 @@ export default function FeedsScreen() {
   const handleDownvote = async (postId) => {
     try {
       const response = await postApi.downvotePost(postId);
-      if (response.success) {
-        // Update the post in the list
+      
+      // Use the API response to update the post data
+      if (response && response.metadata) {
         setPosts(prevPosts =>
           prevPosts.map(post =>
             post.id === postId
-              ? { ...post, likesCount: Math.max((post.likesCount || 0) - 1, 0) }
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  likesCount: response.metadata.upvotes - response.metadata.downvotes
+                }
               : post
           )
         );
@@ -374,15 +385,14 @@ export default function FeedsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 30
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 50,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
   },
   headerTitle: {
     fontSize: 28,

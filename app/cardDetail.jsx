@@ -316,7 +316,7 @@ useEffect(() => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#f5f5f5', paddingTop: 50},
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 80 },
   imageContainer: {

@@ -6,14 +6,14 @@ export const gameSeries = [
     id: 1,
     name: 'Yu-Gi-Oh!',
     domain: 'ygo', // This maps to card_type in API
-    logoUrl: 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png',
+    logoUrl: require('@/assets/images/ygo_banner.png'),
     color: '#8B0000',
   },
   {
     id: 2,
     name: 'Pokémon',
     domain: 'pkm',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/640px-International_Pok%C3%A9mon_logo.svg.png',
+    logoUrl: require('@/assets/images/pkm_banner.png'),
     color: '#FFCB05',
   },
 //   {
@@ -34,7 +34,7 @@ export const gameSeries = [
     id: 5,
     name: 'Riftbound',
     domain: 'rb',
-    logoUrl: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/23d41c7809a48a013f3d8a7204b81fb4d8bdb164-10000x4389.png?auto=format&fit=fill&q=80&w=460',
+    logoUrl: require('@/assets/images/rb_banner.png'),
     color: '#1a1a1a',
   },
 ];

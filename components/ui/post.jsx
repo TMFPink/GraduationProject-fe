@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import RenderHtml from 'react-native-render-html';
@@ -8,35 +9,52 @@ import RenderHtml from 'react-native-render-html';
 const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [hasVoted, setHasVoted] = useState(null); // 'up', 'down', or null
+  const router = useRouter();
 
   // Handle upvote
-  const handleUpvote = () => {
-    if (hasVoted === 'up') {
-      setHasVoted(null);
-    } else {
-      setHasVoted('up');
-      if (onUpvote) onUpvote();
-    }
+  const handleUpvote = (e) => {
+    e.stopPropagation(); // Prevent navigation when clicking vote
+    if (onUpvote) onUpvote();
   };
 
   // Handle downvote
-  const handleDownvote = () => {
-    if (hasVoted === 'down') {
-      setHasVoted(null);
+  const handleDownvote = (e) => {
+    e.stopPropagation(); // Prevent navigation when clicking vote
+    if (onDownvote) onDownvote();
+  };
+
+  // Handle delete
+  const handleDelete = (e) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    if (onDelete) onDelete();
+  };
+
+  // Navigate to post detail
+  const handlePostPress = () => {
+    router.push(`/postDetail?postId=${post.id}`);
+  };
+
+  // Navigate to user profile - check if it's current user or guest
+  const handleUserPress = (e) => {
+    e.stopPropagation(); // Prevent post navigation
+    
+    // Check if the clicked user is the current user
+    if (post.authorId === currentUserId) {
+      // Navigate to own profile page
+      router.navigate('/(tabs)/userpage'); // Replace with your actual profile route
     } else {
-      setHasVoted('down');
-      if (onDownvote) onDownvote();
+      // Navigate to guest profile page
+      router.push(`/guestProfile?userId=${post.authorId}`);
     }
   };
+
+  // Calculate net vote display (upvotes - downvotes)
+  const displayVotes = (post.upvotes || 0) - (post.downvotes || 0);
 
   // Check if thumbnail exists and is not placeholder
   const hasValidThumbnail = post.thumbnail && 
                             post.thumbnail !== 'string' && 
                             post.thumbnail.startsWith('http');
-
-  // Calculate vote display
-  const displayVotes = post.likesCount || 0;
 
   // HTML rendering configuration
   const tagsStyles = {
@@ -79,10 +97,18 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
   };
 
   return (
-    <View style={[styles.postCard, { backgroundColor: colors.background }]}>
+    <TouchableOpacity 
+      style={[styles.postCard, { backgroundColor: colors.background }]}
+      onPress={handlePostPress}
+      activeOpacity={0.7}
+    >
       {/* Header */}
       <View style={styles.postHeader}>
-        <View style={styles.postUserInfo}>
+        <TouchableOpacity 
+          style={styles.postUserInfo}
+          onPress={handleUserPress}
+          activeOpacity={0.7}
+        >
           {/* Avatar */}
           <View style={[styles.avatar, { backgroundColor: colors.tint + '40' }]}>
             {post.authorAvatar ? (
@@ -100,11 +126,11 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
               {post.createdAt}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Options Menu */}
         {currentUserId === post.authorId && (
-          <TouchableOpacity onPress={onDelete}>
+          <TouchableOpacity onPress={handleDelete}>
             <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.muted} />
           </TouchableOpacity>
         )}
@@ -159,45 +185,42 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
         <View style={styles.voteSection}>
           {/* Upvote */}
           <TouchableOpacity 
-            style={[
-              styles.voteButton,
-              hasVoted === 'up' && { backgroundColor: colors.tint + '20' }
-            ]}
+            style={styles.voteButton}
             onPress={handleUpvote}
           >
             <MaterialCommunityIcons 
-              name={hasVoted === 'up' ? 'arrow-up-bold' : 'arrow-up-bold-outline'} 
+              name="arrow-up-bold-outline"
               size={22} 
-              color={hasVoted === 'up' ? colors.tint : colors.muted} 
+              color={colors.muted} 
             />
           </TouchableOpacity>
 
           {/* Vote Count */}
-          <Text style={[
-            styles.voteCount, 
-            { color: hasVoted === 'up' ? colors.tint : hasVoted === 'down' ? '#ff4444' : colors.text }
-          ]}>
+          <Text style={[styles.voteCount, { color: colors.text }]}>
             {displayVotes}
           </Text>
 
           {/* Downvote */}
           <TouchableOpacity 
-            style={[
-              styles.voteButton,
-              hasVoted === 'down' && { backgroundColor: '#ff444420' }
-            ]}
+            style={styles.voteButton}
             onPress={handleDownvote}
           >
             <MaterialCommunityIcons 
-              name={hasVoted === 'down' ? 'arrow-down-bold' : 'arrow-down-bold-outline'} 
+              name="arrow-down-bold-outline"
               size={22} 
-              color={hasVoted === 'down' ? '#ff4444' : colors.muted} 
+              color={colors.muted} 
             />
           </TouchableOpacity>
         </View>
 
         {/* Comment */}
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            handlePostPress();
+          }}
+        >
           <MaterialCommunityIcons name="comment-outline" size={20} color={colors.muted} />
           <Text style={[styles.actionText, { color: colors.muted }]}>
             {post.commentsCount || 0}
@@ -205,12 +228,15 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
         </TouchableOpacity>
 
         {/* Share */}
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={(e) => e.stopPropagation()}
+        >
           <MaterialCommunityIcons name="share-outline" size={20} color={colors.muted} />
           <Text style={[styles.actionText, { color: colors.muted }]}>Share</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

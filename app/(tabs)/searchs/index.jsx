@@ -40,35 +40,35 @@ const Search = () => {
       id: 1,
       name: 'Yu-Gi-Oh!',
       domain: 'ygo',
-      logoUrl: 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png',
+      logoUrl: require('@/assets/images/ygo_banner.png'),
       color: '#8B0000',
     },
     {
       id: 2,
       name: 'Pokémon',
       domain: 'pkm',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/International_Pok%C3%A9mon_logo.svg/640px-International_Pokémon_logo.svg.png',
+      logoUrl: require('@/assets/images/pkm_banner.png'),
       color: '#FFCB05',
     },
     // {
     //   id: 3,
     //   name: 'Magic: The Gathering',
     //   domain: 'mtg',
-    //   logoUrl: 'https://www.icomedia.eu/wp-content/uploads/2021/03/MTG_Primary_LL_1c_Black_LG_V12.png',
+    //   logoUrl: { uri: 'https://www.icomedia.eu/wp-content/uploads/2021/03/MTG_Primary_LL_1c_Black_LG_V12.png' }, // Note: If you uncomment this, wrap remote URLs in { uri: ... } inside the array itself
     //   color: '#F15A24',
     // },
     // {
     //   id: 4,
     //   name: 'Gundam',
     //   domain: 'gundam',
-    //   logoUrl: 'https://travellingman.com/cdn/shop/files/gundam-card-game-newtype-rising-booster-box-gd01-499905_1200x1200.webp?v=1756386542',
+    //   logoUrl: { uri: 'https://travellingman.com/cdn/shop/files/gundam-card-game-newtype-rising-booster-box-gd01-499905_1200x1200.webp?v=1756386542' },
     //   color: '#1a1a1a',
     // },
     {
       id: 5,
       name: 'Riftbound',
       domain: 'rb',
-      logoUrl: 'https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/23d41c7809a48a013f3d8a7204b81fb4d8bdb164-10000x4389.png?auto=format&fit=fill&q=80&w=460',
+      logoUrl: require('@/assets/images/rb_banner.png'),
       color: '#1a1a1a',
     },
   ];
@@ -209,11 +209,13 @@ const Search = () => {
           style={styles.domainPickerButton}
           onPress={() => setIsDomainPickerVisible(true)}
         >
+          {/* FIX START: Removed { uri: ... } wrapper because require() returns a number ID */}
           <Image 
-            source={{ uri: gameSeries.find(g => g.domain === selectedDomain)?.logoUrl }}
+            source={gameSeries.find(g => g.domain === selectedDomain)?.logoUrl}
             style={styles.domainPickerLogo}
             resizeMode="contain"
           />
+          {/* FIX END */}
           <MaterialCommunityIcons name="chevron-down" size={20} color="#666" />
         </TouchableOpacity>
 
@@ -234,10 +236,9 @@ const Search = () => {
             ) : null}
           </View>
 
-          {/* ✅ SCAN BUTTON FIXED HERE */}
           <TouchableOpacity 
             style={styles.iconButton}
-            onPress={() => router.navigate('/cameraScan')}   // ✅ Navigate to cameraScan
+            onPress={() => router.navigate('/cameraScan')}
           >
             <MaterialCommunityIcons name="qrcode-scan" size={24} color="#EA6C5D" />
           </TouchableOpacity>
@@ -323,7 +324,7 @@ const Search = () => {
                   onPress={() => handleDomainChange(game)}
                 >
                   <Image 
-                    source={{ uri: game.logoUrl }}
+                    source={game.logoUrl}
                     style={styles.domainPickerItemLogo}
                     resizeMode="contain"
                   />
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 50,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',

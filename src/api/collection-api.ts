@@ -37,4 +37,9 @@ export const collectionApi = {
     const response = await baseApi.post(`/collections/${collection_id}/cards`, cardData);
     return convertToMetadata(response);
   },
+
+async getCollectionByUserId(user_id: any, page = 1, limit = 20) {
+    const response = await baseApi.get(`/collections/user?user_id=${user_id}&page=${page}&limit=${limit}`);
+    return convertToMetadata(response);
+}
 };

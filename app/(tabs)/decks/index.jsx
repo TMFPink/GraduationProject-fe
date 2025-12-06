@@ -37,7 +37,7 @@ const DeckPage = () => {
             >
               {/* ✅ Show logo */}
               <Image 
-                source={{ uri: series.logoUrl }} 
+                source={series.logoUrl} 
                 style={styles.seriesLogo}
                 resizeMode="contain"
               />
@@ -55,7 +55,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 50,
   },
   title: {
     fontSize: 28,

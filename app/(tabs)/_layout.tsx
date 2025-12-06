@@ -1,5 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
@@ -7,19 +9,31 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+useEffect(() => {
+    const configureNavBar = async () => {
+      // 1. Hide the bottom navigation bar
+      await NavigationBar.setVisibilityAsync('hidden');
+      
+      // 2. (Optional) Set behavior so it stays hidden but reveals on swipe
+      // 'overlay-swipe' allows the bar to float over content when swiped up, then hide again
+      await NavigationBar.setBehaviorAsync('overlay-swipe');
+    };
+
+    configureNavBar();
+  }, []);
 
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          height: 60,
-          position: 'fixed',
+          height: 100,
+          // position: 'absolute',
           backgroundColor: '#E38E49',
           borderTopWidth: 0,
         },
         tabBarActiveTintColor: '#0A3981',
         tabBarInactiveTintColor: '#ffffffff',
+        headerShown: false
       }}
     >
       <Tabs.Screen
@@ -76,7 +90,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="userpage"
         options={{
-          headerShown: false,
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-circle-outline" color={color} size={size} />

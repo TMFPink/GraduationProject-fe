@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   fixedHeader: {
     backgroundColor: '#fafafa',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 12,
   },
 

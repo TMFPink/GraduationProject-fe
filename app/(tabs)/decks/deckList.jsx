@@ -15,16 +15,31 @@ const FRONTEND_TO_BACKEND_DOMAIN = {
   'mtg': 'magic',
 };
 
+// ✅ FIX START: Define Logo Map locally to avoid passing assets via params
+const LOGO_MAP = {
+  'ygo': require('@/assets/images/ygo_banner.png'),
+  'pkm': require('@/assets/images/pkm_banner.png'),
+  'rb': require('@/assets/images/rb_banner.png'),
+  // Add others if needed
+};
+// ✅ FIX END
+
 const DeckListPage = () => {
   const params = useLocalSearchParams();
   const seriesDomain = params.seriesDomain || 'ygo';
   const seriesName = params.seriesName || 'Yu-Gi-Oh!';
-  const seriesLogo = params.seriesLogo || 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png';
+  
+  // ✅ FIX: Resolve the logo source directly. 
+  // If it exists in LOGO_MAP, use it (returns a number ID). 
+  // Otherwise, fallback to a remote URL object.
+  const seriesLogoSource = LOGO_MAP[seriesDomain] 
+    ? LOGO_MAP[seriesDomain] 
+    : { uri: 'https://www.yugioh-card.com/en/wp-content/uploads/2020/04/logo-main.png' };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [allDecks, setAllDecks] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+   
   // ✅ Multi-select delete states
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedDecks, setSelectedDecks] = useState(new Set());
@@ -161,8 +176,8 @@ const DeckListPage = () => {
     }
   };
 
-  const handleBack = () => router.navigate('/decks');
-  
+  const handleBack = () => router.back('/decks');
+   
   const handleDeckPress = (deck) => {
     if (isEditMode) {
       // In edit mode - toggle selection
@@ -196,8 +211,9 @@ const DeckListPage = () => {
         </TouchableOpacity>
 
         <View style={styles.logoContainer}>
+          {/* ✅ FIX: Passed direct source object/number */}
           <Image 
-            source={{ uri: seriesLogo }} 
+            source={seriesLogoSource} 
             style={styles.seriesLogo} 
             resizeMode="contain" 
           />
@@ -383,7 +399,7 @@ const styles = StyleSheet.create({
   fixedHeader: {
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 50,
     paddingBottom: 12,
   },
 

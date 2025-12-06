@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
-  useWindowDimensions,
+  Dimensions,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import Posts from "@/components/ui/post";
 import BinderCard from "@/components/ui/item-binder";
 import ItemDeck from '../../../components/ui/item-deck';
+import FollowModal from "../../../components/ui//modals/followModal";
 
 // Context & API
 import { useAuth } from '@/src/contexts/auth-context';
@@ -27,7 +28,8 @@ import { postApi } from '@/src/api/post-api';
 const TABS = ["Posts", "Portfolio", "Collections"];
 
 const ProfileScreen = () => {
-  const { width } = useWindowDimensions();
+  const width = Dimensions.get("window").width;
+  
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   
@@ -43,6 +45,10 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(true);
   const [featuredLoading, setFeaturedLoading] = useState(true);
+
+  // Modal states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMode, setModalMode] = useState('followers');
 
   // Animation Refs
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -65,6 +71,16 @@ const ProfileScreen = () => {
 
   const navigateEdit = () => {
     router.navigate('/userpage/editProfile');
+  };
+
+  const handleFollowersPress = () => {
+    setModalMode('followers');
+    setModalVisible(true);
+  };
+
+  const handleFollowingPress = () => {
+    setModalMode('following');
+    setModalVisible(true);
   };
 
   // --- API Calls ---
@@ -110,14 +126,12 @@ const ProfileScreen = () => {
       
       // 1. Fetch Owned Cards
       const ownedResponse = await ownedCardApi.getAllOwnedCards(1, 100);
-      // Robust check for data structure
       const ownedCardsData = ownedResponse.metadata?.ownedCards || ownedResponse.data || [];
       setOwnedCards(ownedCardsData);
       
       // 2. Fetch Binders
       const collectionsResponse = await collectionApi.getAllCollection(1, 100);
       const collections = collectionsResponse.metadata?.collections || collectionsResponse.collections || [];
-      // Filter out the default "Owned Cards" binder if it exists in the list to avoid duplication
       const binders = collections.filter(col => col.name !== "Owned Cards");
       setMyBinders(binders);
       
@@ -130,8 +144,6 @@ const ProfileScreen = () => {
 
   // --- Lifecycle Management ---
 
-  // useFocusEffect triggers every time the screen comes into focus.
-  // This ensures that when you navigate back from "Edit Featured Cards", the data refreshes.
   useFocusEffect(
     useCallback(() => {
       if (!authLoading && user && user.user_id) {
@@ -154,7 +166,7 @@ const ProfileScreen = () => {
   const handleDeleteBinder = async (collectionId) => {
     try {
       await collectionApi.deleteCollection(collectionId);
-      fetchCollection(); // Refresh list after delete
+      fetchCollection();
     } catch (error) {
       console.error('Failed to delete collection:', error);
     }
@@ -175,7 +187,7 @@ const ProfileScreen = () => {
           {/* Cover */}
           <View style={styles.coverContainer}>
             <Image
-              source={{ uri: "https://images.unsplash.com/photo-1503264116251-35a269479413" }}
+              source={{ uri: user?.cover_url || "https://images.unsplash.com/photo-1503264116251-35a269479413" }}
               style={styles.coverImage}
             />
             <TouchableOpacity
@@ -210,12 +222,16 @@ const ProfileScreen = () => {
             )}
 
             <View style={styles.followRow}>
-              <Text style={styles.followText}>
-                <Text style={styles.bold}>{user?.followers_count || 0}</Text> Followers
-              </Text>
-              <Text style={styles.followText}>
-                <Text style={styles.bold}>{user?.following_count || 0}</Text> Following
-              </Text>
+              <TouchableOpacity onPress={handleFollowersPress}>
+                <Text style={styles.followText}>
+                  <Text style={styles.bold}>{user?.followers_count || 0}</Text> Followers
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleFollowingPress}>
+                <Text style={styles.followText}>
+                  <Text style={styles.bold}>{user?.following_count || 0}</Text> Following
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -291,22 +307,25 @@ const ProfileScreen = () => {
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="large" color="#000" />
                     </View>
-                  ) : featuredCards.length > 0 ? (
-                    featuredCards.map((item, index) => {
-                      // Handle nested Card object or flat properties for image source
-                      const imageUrl = item.card?.image_normal_url || item.card?.image_small_url || item.image_normal_url;
-                      return (
-                        <Image
-                          key={item.owned_card_id || index}
-                          source={{ uri: imageUrl }}
-                          style={{ width: 100, height: 140, resizeMode: 'contain' }}
-                        />
-                      );
-                    })
                   ) : (
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>No featured cards yet</Text>
-                    </View>
+                    [0, 1, 2].map((index) => {
+                      const item = featuredCards[index];
+
+                      if (item) {
+                         const imageUrl = item.card?.image_normal_url || item.card?.image_small_url || item.image_normal_url;
+                         return (
+                           <Image
+                             key={item.owned_card_id || index}
+                             source={{ uri: imageUrl }}
+                             style={styles.featuredCardSlot}
+                           />
+                         );
+                      } else {
+                         return (
+                           <View key={`placeholder-${index}`} style={[styles.featuredCardSlot, styles.placeholderCard]} />
+                         );
+                      }
+                    })
                   )}
                 </View>
               </View>
@@ -318,9 +337,8 @@ const ProfileScreen = () => {
                   <ActivityIndicator size="large" color="#000" />
                 </View>
               ) : ownedCards.length > 0 ? (
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
                   {ownedCards.map((item, index) => {
-                    // Normalize data access: Backends often send 'Card' vs 'card' inconsistently
                     const cardData = item.card || item.Card || {};
                     const image = cardData.image_normal_url || cardData.image_small_url || item.image;
                     const name = cardData.name || item.name || "Unknown Card";
@@ -376,6 +394,16 @@ const ProfileScreen = () => {
           </Animated.ScrollView>
         </ScrollView>
       )}
+
+      {/* Follow Modal */}
+      {user && (
+        <FollowModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          userId={user.user_id}
+          mode={modalMode}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -383,8 +411,8 @@ const ProfileScreen = () => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  coverContainer: { width: "100%", height: 120 },
+  container: { flex: 1, backgroundColor: "#ffffff" },
+  coverContainer: { width: "100%", height: 200 },
   coverImage: { width: "100%", height: "100%", resizeMode: "cover" },
   profileRow: {
     flexDirection: "row",
@@ -403,7 +431,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     paddingHorizontal: 16,
-    marginBottom: 50,
   },
   nameRow: {
     flexDirection: "row",
@@ -443,7 +470,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
     position: "relative",
-    marginTop: 10,
+    marginTop: 50,
   },
   tabButton: { flex: 1, alignItems: "center", paddingVertical: 10 },
   tabText: { fontSize: 15, color: "#888" },
@@ -485,5 +512,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
+  },
+  featuredCardSlot: {
+    width: 100,
+    height: 140,
+    borderRadius: 8, 
+    resizeMode: 'contain',
+  },
+  placeholderCard: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'solid', 
   },
 });

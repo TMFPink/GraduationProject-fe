@@ -21,5 +21,9 @@ export const ownedCardApi = {
   updateFeatureCards: async (featureCards: Array<{owned_card_id: string, position: number}>) => {
     const response = await baseApi.put(`/owned-cards/feature`, { feature_cards: featureCards });
     return convertToMetadata(response);
+  },
+  getOwnedCardByUserId: async (user_id: any, page = 1, limit = 20) => {
+      const response = await baseApi.get(`/owned-cards/user?user_id=${user_id}&page=${page}&limit=${limit}`);
+      return convertToMetadata(response);
   }
 }
