@@ -98,27 +98,44 @@ const ProfileScreen = () => {
     }
   };
 
-  const fetchUserPosts = async (userId) => {
-    try {
-      setPostsLoading(true);
-      const response = await postApi.getPostsByUserId(userId, 100, 1);
-      const rawPosts = response.metadata?.posts || [];
-      
-      const transformedPosts = rawPosts.map(post => ({
-        ...post,
-        authorName: user?.username || 'Unknown User',
-        authorAvatar: user?.avatar_url || null,
-        id: post.post_id,
-        authorId: post.user_id,
-      }));
-      
-      setUserPosts(transformedPosts);
-    } catch (error) {
-      console.error('Failed to fetch user posts:', error);
-    } finally {
-      setPostsLoading(false);
+  // ✅ UPDATE fetchUserPosts function
+const fetchUserPosts = async (userId) => {
+  try {
+    setPostsLoading(true);
+    const response = await postApi.getPostsByUserId(userId, 100, 1);
+    const rawPosts = response.metadata?.posts || [];
+    
+    const transformedPosts = rawPosts.map(post => ({
+      ...post,
+      authorName: user?.username || 'Unknown User',
+      authorAvatar: user?.avatar_url || null,
+      id: post.post_id,
+      authorId: post.user_id,
+      upvotes: post.upvotes,
+      downvotes: post.downvotes,
+      isUpvoted: post.isUpvoted || false,      // ✅ ADD THIS
+      isDownvoted: post.isDownvoted || false,  // ✅ ADD THIS
+    }));
+    
+    setUserPosts(transformedPosts);
+  } catch (error) {
+    console.error('Failed to fetch user posts:', error);
+  } finally {
+    setPostsLoading(false);
+  }
+};
+
+
+const handleDeletePost = async (postId) => {
+  try {
+    const response = await postApi.deletePost(postId);
+    if (response.success) {
+      setUserPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
     }
-  };
+  } catch (err) {
+    console.error('Error deleting post:', err);
+  }
+};
 
   const fetchCollection = async () => {
     try {
@@ -282,7 +299,14 @@ const ProfileScreen = () => {
                 </View>
               ) : userPosts.length > 0 ? (
                 userPosts.map((post) => (
-                  <Posts key={post.post_id} post={post} />
+                  <Posts 
+                    key={post.post_id} 
+                    post={post}
+                    onUpvote={() => handleUpvote(post.id)}      // ✅ ADD THIS
+                    onDownvote={() => handleDownvote(post.id)}  // ✅ ADD THIS
+                    onDelete={() => handleDeletePost(post.id)}  // ✅ ADD THIS
+                    currentUserId={user?.user_id}               // ✅ ADD THIS
+                  />
                 ))
               ) : (
                 <View style={styles.emptyContainer}>

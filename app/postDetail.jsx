@@ -70,6 +70,8 @@ export default function PostDetailScreen() {
           upvotes: postData.upvotes,
           downvotes: postData.downvotes,
           netVotes: postData.upvotes - postData.downvotes,
+          isUpvoted: postData.isUpvoted || false,       
+          isDownvoted: postData.isDownvoted || false, 
         });
       }
     } catch (error) {
@@ -165,9 +167,23 @@ export default function PostDetailScreen() {
     }
   }, [post]);
 
-  // Handle post upvote
+  // Vote handlers
   const handlePostUpvote = async () => {
+    const wasUpvoted = post.isUpvoted;
+    const wasDownvoted = post.isDownvoted;
+    
+    // Toggle logic
+    const newIsUpvoted = !wasUpvoted;
+    const newIsDownvoted = false;
+
     try {
+      // Optimistic update
+      setPost(prev => ({
+        ...prev,
+        isUpvoted: newIsUpvoted,
+        isDownvoted: newIsDownvoted,
+      }));
+
       const response = await postApi.upvotePost(postId);
       if (response && response.metadata) {
         setPost(prev => ({
@@ -175,16 +191,37 @@ export default function PostDetailScreen() {
           upvotes: response.metadata.upvotes,
           downvotes: response.metadata.downvotes,
           netVotes: response.metadata.upvotes - response.metadata.downvotes,
+          isUpvoted: newIsUpvoted,
+          isDownvoted: newIsDownvoted,
         }));
       }
     } catch (error) {
       console.error('Error upvoting post:', error);
+      // Revert on error
+      setPost(prev => ({
+        ...prev,
+        isUpvoted: wasUpvoted,
+        isDownvoted: wasDownvoted,
+      }));
     }
   };
 
-  // Handle post downvote
   const handlePostDownvote = async () => {
+    const wasUpvoted = post.isUpvoted;
+    const wasDownvoted = post.isDownvoted;
+    
+    // Toggle logic
+    const newIsUpvoted = false;
+    const newIsDownvoted = !wasDownvoted;
+
     try {
+      // Optimistic update
+      setPost(prev => ({
+        ...prev,
+        isUpvoted: newIsUpvoted,
+        isDownvoted: newIsDownvoted,
+      }));
+
       const response = await postApi.downvotePost(postId);
       if (response && response.metadata) {
         setPost(prev => ({
@@ -192,10 +229,18 @@ export default function PostDetailScreen() {
           upvotes: response.metadata.upvotes,
           downvotes: response.metadata.downvotes,
           netVotes: response.metadata.upvotes - response.metadata.downvotes,
+          isUpvoted: newIsUpvoted,
+          isDownvoted: newIsDownvoted,
         }));
       }
     } catch (error) {
       console.error('Error downvoting post:', error);
+      // Revert on error
+      setPost(prev => ({
+        ...prev,
+        isUpvoted: wasUpvoted,
+        isDownvoted: wasDownvoted,
+      }));
     }
   };
 
@@ -258,8 +303,6 @@ export default function PostDetailScreen() {
       });
 
       if (response && response.metadata) {
-        // FIX: Use currentUser for user details instead of relying on response.metadata.user
-        // The API returns the comment data but often omits the joined user object on creation
         const newComment = {
           id: response.metadata.comment_id,
           postId: response.metadata.post_id,
@@ -273,7 +316,7 @@ export default function PostDetailScreen() {
           user: {
             userId: currentUser?.user_id,
             username: currentUser?.username || 'Me',
-            avatar: currentUser?.avatar_url, // Using avatar_url from AuthContext
+            avatar: currentUser?.avatar_url,
           },
           replies: [],
         };
@@ -389,6 +432,13 @@ export default function PostDetailScreen() {
   if (!post) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Added Back Button for Error State too */}
+        <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={styles.backButtonOverlay}
+        >
+            <Text style={styles.backButtonOverlayText}>← Back</Text>
+        </TouchableOpacity>
         <View style={styles.loadingContainer}>
           <ThemedText>Post not found</ThemedText>
         </View>
@@ -402,6 +452,14 @@ export default function PostDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* ✅ NEW BACK BUTTON OVERLAY */}
+      <TouchableOpacity 
+        onPress={() => router.back()} 
+        style={styles.backButtonOverlay}
+      >
+        <Text style={styles.backButtonOverlayText}>← Back</Text>
+      </TouchableOpacity>
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -506,23 +564,47 @@ export default function PostDetailScreen() {
             <View style={[styles.voteBar, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
               <View style={styles.voteSection}>
                 <TouchableOpacity 
-                  style={styles.voteButton}
+                  style={[
+                    styles.voteButton,
+                    post.isUpvoted && { backgroundColor: colors.tint + '20' }
+                  ]}
                   onPress={handlePostUpvote}
                 >
-                  <MaterialCommunityIcons name="arrow-up-bold-outline" size={24} color={colors.muted} />
+                  <MaterialCommunityIcons 
+                    name={post.isUpvoted ? 'arrow-up-bold' : 'arrow-up-bold-outline'}
+                    size={24} 
+                    color={post.isUpvoted ? colors.tint : colors.muted} 
+                  />
                 </TouchableOpacity>
                 
-                <Text style={[styles.voteCount, { color: colors.text }]}>
+                <Text style={[
+                  styles.voteCount, 
+                  { 
+                    color: post.isUpvoted 
+                      ? colors.tint 
+                      : post.isDownvoted 
+                      ? '#ff4444' 
+                      : colors.text 
+                  }
+                ]}>
                   {post.netVotes}
                 </Text>
                 
                 <TouchableOpacity 
-                  style={styles.voteButton}
+                  style={[
+                    styles.voteButton,
+                    post.isDownvoted && { backgroundColor: '#ff444420' }
+                  ]}
                   onPress={handlePostDownvote}
                 >
-                  <MaterialCommunityIcons name="arrow-down-bold-outline" size={24} color={colors.muted} />
+                  <MaterialCommunityIcons 
+                    name={post.isDownvoted ? 'arrow-down-bold' : 'arrow-down-bold-outline'}
+                    size={24} 
+                    color={post.isDownvoted ? '#ff4444' : colors.muted} 
+                  />
                 </TouchableOpacity>
               </View>
+
 
               <TouchableOpacity style={styles.actionButton}>
                 <MaterialCommunityIcons name="share-outline" size={22} color={colors.muted} />
@@ -606,6 +688,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // ✅ NEW BACK BUTTON STYLES
+  backButtonOverlay: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    zIndex: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  backButtonOverlayText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  // END NEW STYLES
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -613,6 +712,7 @@ const styles = StyleSheet.create({
   },
   postContainer: {
     flex: 1,
+    paddingTop: 50, // Added padding top to prevent content overlap with back button
   },
   postHeader: {
     flexDirection: 'row',

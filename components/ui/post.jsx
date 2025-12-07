@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import RenderHtml from 'react-native-render-html';
 
@@ -11,21 +11,25 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
 
+  // Get vote state from post data
+  const isUpvoted = post.isUpvoted || false;
+  const isDownvoted = post.isDownvoted || false;
+
   // Handle upvote
   const handleUpvote = (e) => {
-    e.stopPropagation(); // Prevent navigation when clicking vote
+    e.stopPropagation();
     if (onUpvote) onUpvote();
   };
 
   // Handle downvote
   const handleDownvote = (e) => {
-    e.stopPropagation(); // Prevent navigation when clicking vote
+    e.stopPropagation();
     if (onDownvote) onDownvote();
   };
 
   // Handle delete
   const handleDelete = (e) => {
-    e.stopPropagation(); // Prevent navigation when clicking delete
+    e.stopPropagation();
     if (onDelete) onDelete();
   };
 
@@ -34,66 +38,36 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
     router.push(`/postDetail?postId=${post.id}`);
   };
 
-  // Navigate to user profile - check if it's current user or guest
+  // Navigate to user profile
   const handleUserPress = (e) => {
-    e.stopPropagation(); // Prevent post navigation
+    e.stopPropagation();
     
-    // Check if the clicked user is the current user
     if (post.authorId === currentUserId) {
-      // Navigate to own profile page
-      router.navigate('/(tabs)/userpage'); // Replace with your actual profile route
+      router.navigate('/(tabs)/userpage');
     } else {
-      // Navigate to guest profile page
       router.push(`/guestProfile?userId=${post.authorId}`);
     }
   };
 
-  // Calculate net vote display (upvotes - downvotes)
+  // Calculate net vote display
   const displayVotes = (post.upvotes || 0) - (post.downvotes || 0);
 
-  // Check if thumbnail exists and is not placeholder
+  // Check if thumbnail exists
   const hasValidThumbnail = post.thumbnail && 
                             post.thumbnail !== 'string' && 
                             post.thumbnail.startsWith('http');
 
-  // HTML rendering configuration
+  // HTML styles
   const tagsStyles = {
-    body: {
-      color: colors.text,
-      fontSize: 15,
-      lineHeight: 22,
-    },
-    p: {
-      marginTop: 0,
-      marginBottom: 8,
-    },
-    a: {
-      color: colors.tint,
-    },
-    h1: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 8,
-      color: colors.text,
-    },
-    h2: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      marginBottom: 6,
-      color: colors.text,
-    },
-    strong: {
-      fontWeight: 'bold',
-    },
-    em: {
-      fontStyle: 'italic',
-    },
-    ul: {
-      marginLeft: 12,
-    },
-    ol: {
-      marginLeft: 12,
-    },
+    body: { color: colors.text, fontSize: 15, lineHeight: 22 },
+    p: { marginTop: 0, marginBottom: 8 },
+    a: { color: colors.tint },
+    h1: { fontSize: 24, fontWeight: 'bold', marginBottom: 8, color: colors.text },
+    h2: { fontSize: 20, fontWeight: 'bold', marginBottom: 6, color: colors.text },
+    strong: { fontWeight: 'bold' },
+    em: { fontStyle: 'italic' },
+    ul: { marginLeft: 12 },
+    ol: { marginLeft: 12 },
   };
 
   return (
@@ -109,7 +83,6 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
           onPress={handleUserPress}
           activeOpacity={0.7}
         >
-          {/* Avatar */}
           <View style={[styles.avatar, { backgroundColor: colors.tint + '40' }]}>
             {post.authorAvatar ? (
               <Image source={{ uri: post.authorAvatar }} style={styles.avatarImage} />
@@ -128,7 +101,6 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
           </View>
         </TouchableOpacity>
 
-        {/* Options Menu */}
         {currentUserId === post.authorId && (
           <TouchableOpacity onPress={handleDelete}>
             <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.muted} />
@@ -143,7 +115,7 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
         </Text>
       )}
 
-      {/* Thumbnail Image */}
+      {/* Thumbnail */}
       {hasValidThumbnail && (
         <View style={styles.thumbnailContainer}>
           <Image 
@@ -154,7 +126,7 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
         </View>
       )}
 
-      {/* Content - HTML Rendered */}
+      {/* Content */}
       <View style={styles.contentContainer}>
         <RenderHtml
           source={{ html: post.content || '<p>No content</p>' }}
@@ -181,34 +153,48 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
 
       {/* Actions Bar */}
       <View style={[styles.actionsBar, { borderTopColor: colors.border }]}>
-        {/* Vote Section */}
         <View style={styles.voteSection}>
-          {/* Upvote */}
+          {/* Upvote - highlighted if user voted */}
           <TouchableOpacity 
-            style={styles.voteButton}
+            style={[
+              styles.voteButton,
+              isUpvoted && { backgroundColor: colors.tint + '20' }
+            ]}
             onPress={handleUpvote}
           >
             <MaterialCommunityIcons 
-              name="arrow-up-bold-outline"
+              name={isUpvoted ? 'arrow-up-bold' : 'arrow-up-bold-outline'}
               size={22} 
-              color={colors.muted} 
+              color={isUpvoted ? colors.tint : colors.muted} 
             />
           </TouchableOpacity>
 
           {/* Vote Count */}
-          <Text style={[styles.voteCount, { color: colors.text }]}>
+          <Text style={[
+            styles.voteCount, 
+            { 
+              color: isUpvoted 
+                ? colors.tint 
+                : isDownvoted 
+                ? '#ff4444' 
+                : colors.text 
+            }
+          ]}>
             {displayVotes}
           </Text>
 
-          {/* Downvote */}
+          {/* Downvote - highlighted if user voted */}
           <TouchableOpacity 
-            style={styles.voteButton}
+            style={[
+              styles.voteButton,
+              isDownvoted && { backgroundColor: '#ff444420' }
+            ]}
             onPress={handleDownvote}
           >
             <MaterialCommunityIcons 
-              name="arrow-down-bold-outline"
+              name={isDownvoted ? 'arrow-down-bold' : 'arrow-down-bold-outline'}
               size={22} 
-              color={colors.muted} 
+              color={isDownvoted ? '#ff4444' : colors.muted} 
             />
           </TouchableOpacity>
         </View>

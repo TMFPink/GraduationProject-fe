@@ -108,6 +108,8 @@ export default function FeedsScreen() {
               downvotes: post.downvotes,    // ✅ ADD THIS
               likesCount: post.upvotes - post.downvotes,
               commentsCount: 0,
+              isUpvoted: post.isUpvoted || false,    
+              isDownvoted: post.isDownvoted || false, 
             };
           })
         );
@@ -180,54 +182,140 @@ export default function FeedsScreen() {
     }
   }, [loadingMore, hasMore, loading, page]);
 
+// CRITICAL: Update vote handlers with optimistic UI update
 const handleUpvote = async (postId) => {
-    try {
-      const response = await postApi.upvotePost(postId);
-      
-      // Use the API response to update the post data
-      if (response && response.metadata) {
-        setPosts(prevPosts =>
-          prevPosts.map(post =>
-            post.id === postId
-              ? { 
-                  ...post, 
-                  upvotes: response.metadata.upvotes,
-                  downvotes: response.metadata.downvotes,
-                  likesCount: response.metadata.upvotes - response.metadata.downvotes
-                }
-              : post
-          )
-        );
-      }
-    } catch (err) {
-      console.error('Error upvoting post:', err);
-    }
-  };
+  // Get current vote state
+  const currentPost = posts.find(p => p.id === postId);
+  if (!currentPost) return;
 
-  const handleDownvote = async (postId) => {
-    try {
-      const response = await postApi.downvotePost(postId);
-      
-      // Use the API response to update the post data
-      if (response && response.metadata) {
-        setPosts(prevPosts =>
-          prevPosts.map(post =>
-            post.id === postId
-              ? { 
-                  ...post, 
-                  upvotes: response.metadata.upvotes,
-                  downvotes: response.metadata.downvotes,
-                  likesCount: response.metadata.upvotes - response.metadata.downvotes
-                }
-              : post
-          )
-        );
-      }
-    } catch (err) {
-      console.error('Error downvoting post:', err);
-    }
-  };
+  const wasUpvoted = currentPost.isUpvoted;
+  const wasDownvoted = currentPost.isDownvoted;
 
+  // Calculate new vote state based on toggle logic:
+  // - If already upvoted → remove (both false)
+  // - If not voted → upvote (isUpvoted true)
+  // - If downvoted → switch to upvote (isUpvoted true, isDownvoted false)
+  const newIsUpvoted = !wasUpvoted;
+  const newIsDownvoted = false;
+
+  try {
+    // Optimistically update UI immediately
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: newIsUpvoted,
+              isDownvoted: newIsDownvoted,
+            }
+          : post
+      )
+    );
+
+    // Call API
+    const response = await postApi.upvotePost(postId);
+    
+    // Update with actual counts from backend
+    if (response && response.metadata) {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post, 
+                upvotes: response.metadata.upvotes,
+                downvotes: response.metadata.downvotes,
+                likesCount: response.metadata.upvotes - response.metadata.downvotes,
+                // Keep the optimistic vote state
+                isUpvoted: newIsUpvoted,
+                isDownvoted: newIsDownvoted,
+              }
+            : post
+        )
+      );
+    }
+  } catch (err) {
+    console.error('Error upvoting post:', err);
+    // Revert optimistic update on error
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: wasUpvoted,
+              isDownvoted: wasDownvoted,
+            }
+          : post
+      )
+    );
+  }
+};
+
+const handleDownvote = async (postId) => {
+  // Get current vote state
+  const currentPost = posts.find(p => p.id === postId);
+  if (!currentPost) return;
+
+  const wasUpvoted = currentPost.isUpvoted;
+  const wasDownvoted = currentPost.isDownvoted;
+
+  // Calculate new vote state based on toggle logic:
+  // - If already downvoted → remove (both false)
+  // - If not voted → downvote (isDownvoted true)
+  // - If upvoted → switch to downvote (isDownvoted true, isUpvoted false)
+  const newIsUpvoted = false;
+  const newIsDownvoted = !wasDownvoted;
+
+  try {
+    // Optimistically update UI immediately
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: newIsUpvoted,
+              isDownvoted: newIsDownvoted,
+            }
+          : post
+      )
+    );
+
+    // Call API
+    const response = await postApi.downvotePost(postId);
+    
+    // Update with actual counts from backend
+    if (response && response.metadata) {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post, 
+                upvotes: response.metadata.upvotes,
+                downvotes: response.metadata.downvotes,
+                likesCount: response.metadata.upvotes - response.metadata.downvotes,
+                // Keep the optimistic vote state
+                isUpvoted: newIsUpvoted,
+                isDownvoted: newIsDownvoted,
+              }
+            : post
+        )
+      );
+    }
+  } catch (err) {
+    console.error('Error downvoting post:', err);
+    // Revert optimistic update on error
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: wasUpvoted,
+              isDownvoted: wasDownvoted,
+            }
+          : post
+      )
+    );
+  }
+};
   const handleDeletePost = async (postId) => {
     try {
       const response = await postApi.deletePost(postId);

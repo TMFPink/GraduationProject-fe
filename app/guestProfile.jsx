@@ -102,28 +102,159 @@ const GuestProfileScreen = () => {
   };
 
   // Fetch guest user posts
-  const fetchGuestPosts = async () => {
-    try {
-      setPostsLoading(true);
-      const response = await postApi.getPostsByUserId(userId, 100, 1);
-      const rawPosts = response.metadata?.posts || [];
+  // ✅ UPDATE fetchGuestPosts function
+const fetchGuestPosts = async () => {
+  try {
+    setPostsLoading(true);
+    const response = await postApi.getPostsByUserId(userId, 100, 1);
+    const rawPosts = response.metadata?.posts || [];
 
-      const transformedPosts = rawPosts.map((post) => ({
-        ...post,
-        authorName: guestUser?.username || "Unknown User",
-        authorAvatar: guestUser?.avatar_url || null,
-        id: post.post_id,
-        authorId: post.user_id,
-      }));
+    const transformedPosts = rawPosts.map((post) => ({
+      ...post,
+      authorName: guestUser?.username || "Unknown User",
+      authorAvatar: guestUser?.avatar_url || null,
+      id: post.post_id,
+      authorId: post.user_id,
+      upvotes: post.upvotes,
+      downvotes: post.downvotes,
+      isUpvoted: post.isUpvoted || false,      // ✅ ADD THIS
+      isDownvoted: post.isDownvoted || false,  // ✅ ADD THIS
+    }));
 
-      setGuestPosts(transformedPosts);
-    } catch (error) {
-      console.error("Failed to fetch guest posts:", error);
-      setGuestPosts([]);
-    } finally {
-      setPostsLoading(false);
+    setGuestPosts(transformedPosts);
+  } catch (error) {
+    console.error("Failed to fetch guest posts:", error);
+    setGuestPosts([]);
+  } finally {
+    setPostsLoading(false);
+  }
+};
+
+// ✅ ADD VOTE HANDLERS (add these functions after fetchGuestCollections)
+const handleUpvote = async (postId) => {
+  const currentPost = guestPosts.find(p => p.id === postId);
+  if (!currentPost) return;
+
+  const wasUpvoted = currentPost.isUpvoted;
+  const wasDownvoted = currentPost.isDownvoted;
+  const newIsUpvoted = !wasUpvoted;
+  const newIsDownvoted = false;
+
+  try {
+    // Optimistic update
+    setGuestPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: newIsUpvoted,
+              isDownvoted: newIsDownvoted,
+            }
+          : post
+      )
+    );
+
+    const response = await postApi.upvotePost(postId);
+    
+    if (response && response.metadata) {
+      setGuestPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post, 
+                upvotes: response.metadata.upvotes,
+                downvotes: response.metadata.downvotes,
+                isUpvoted: newIsUpvoted,
+                isDownvoted: newIsDownvoted,
+              }
+            : post
+        )
+      );
     }
-  };
+  } catch (err) {
+    console.error('Error upvoting post:', err);
+    // Revert on error
+    setGuestPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: wasUpvoted,
+              isDownvoted: wasDownvoted,
+            }
+          : post
+      )
+    );
+  }
+};
+
+const handleDownvote = async (postId) => {
+  const currentPost = guestPosts.find(p => p.id === postId);
+  if (!currentPost) return;
+
+  const wasUpvoted = currentPost.isUpvoted;
+  const wasDownvoted = currentPost.isDownvoted;
+  const newIsUpvoted = false;
+  const newIsDownvoted = !wasDownvoted;
+
+  try {
+    // Optimistic update
+    setGuestPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: newIsUpvoted,
+              isDownvoted: newIsDownvoted,
+            }
+          : post
+      )
+    );
+
+    const response = await postApi.downvotePost(postId);
+    
+    if (response && response.metadata) {
+      setGuestPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post, 
+                upvotes: response.metadata.upvotes,
+                downvotes: response.metadata.downvotes,
+                isUpvoted: newIsUpvoted,
+                isDownvoted: newIsDownvoted,
+              }
+            : post
+        )
+      );
+    }
+  } catch (err) {
+    console.error('Error downvoting post:', err);
+    // Revert on error
+    setGuestPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? { 
+              ...post,
+              isUpvoted: wasUpvoted,
+              isDownvoted: wasDownvoted,
+            }
+          : post
+      )
+    );
+  }
+};
+
+const handleDeletePost = async (postId) => {
+  try {
+    const response = await postApi.deletePost(postId);
+    if (response.success) {
+      setGuestPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+    }
+  } catch (err) {
+    console.error('Error deleting post:', err);
+  }
+};
 
   // Fetch guest collections
   const fetchGuestCollections = async () => {
@@ -386,7 +517,14 @@ const GuestProfileScreen = () => {
                 <ActivityIndicator size="large" color="#000" />
               </View>
             ) : guestPosts.length > 0 ? (
-              guestPosts.map((post) => <Posts key={post.post_id} post={post} />)
+              guestPosts.map((post) => 
+              <Posts 
+                key={post.post_id} 
+                post={post} 
+                onUpvote={() => handleUpvote(post.id)}      // ✅ ADD THIS
+                onDownvote={() => handleDownvote(post.id)}  // ✅ ADD THIS
+                onDelete={() => handleDeletePost(post.id)}  // ✅ ADD THIS
+                currentUserId={currentUser?.user_id}  />)
             ) : (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No posts yet</Text>
