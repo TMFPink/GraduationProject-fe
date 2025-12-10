@@ -217,7 +217,6 @@ const DeckListPage = () => {
             style={styles.seriesLogo} 
             resizeMode="contain" 
           />
-          <Text style={styles.seriesName}>{seriesName}</Text>
         </View>
 
         {/* ✅ Search + Edit Button */}
@@ -392,12 +391,12 @@ const DeckListPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#212121',
   },
 
   // ===== Fixed Header =====
   fixedHeader: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#212121',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 12,
@@ -410,7 +409,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
 
   logoContainer: {
@@ -419,15 +418,9 @@ const styles = StyleSheet.create({
   },
   seriesLogo: {
     width: 200,
-    height: 60,
-    marginBottom: 6,
+    height: 70,
+    // marginBottom: 6,
   },
-  seriesName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,26 +428,26 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
   },
   searchInput: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
 
   // ✅ Edit button
   editButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2CC0F',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -465,16 +458,15 @@ const styles = StyleSheet.create({
 
   // ===== Fixed Decks Header =====
   fixedDecksHeader: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#212121',
     paddingHorizontal: 20,
     paddingVertical: 12,
-
     zIndex: 5,
   },
 
   deckCountText: {
     fontSize: 14,
-    color: '#666',
+    color: '#F2CC0F',
     fontWeight: '500',
   },
 
@@ -531,7 +523,7 @@ const styles = StyleSheet.create({
   // ✅ Delete selected button
   deleteSelectedButton: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 10,
     left: 20,
     right: 20,
     backgroundColor: '#EF4444',
@@ -573,7 +565,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -586,7 +578,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#ffffff',
     marginBottom: 12,
   },
   modalMessage: {

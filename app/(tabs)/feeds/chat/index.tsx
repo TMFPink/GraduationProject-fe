@@ -115,7 +115,7 @@ export default function ChatListScreen() {
   };
 
   const renderChatItem = ({ item }: { item: ChatSummary }) => {
-    const fullName = item.last_name ? `${item.first_name} ${item.last_name}` : item.first_name;
+    const fullName = item.username;
     
     return (
       <TouchableOpacity

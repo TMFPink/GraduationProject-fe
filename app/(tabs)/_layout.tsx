@@ -16,7 +16,7 @@ useEffect(() => {
       
       // 2. (Optional) Set behavior so it stays hidden but reveals on swipe
       // 'overlay-swipe' allows the bar to float over content when swiped up, then hide again
-      await NavigationBar.setBehaviorAsync('overlay-swipe');
+      // await NavigationBar.setBehaviorAsync('overlay-swipe');
     };
 
     configureNavBar();
@@ -28,10 +28,10 @@ useEffect(() => {
         tabBarStyle: {
           height: 100,
           // position: 'absolute',
-          backgroundColor: '#E38E49',
+          backgroundColor: '#F2CC0F',
           borderTopWidth: 0,
         },
-        tabBarActiveTintColor: '#0A3981',
+        tabBarActiveTintColor: '#212121',
         tabBarInactiveTintColor: '#ffffffff',
         headerShown: false
       }}

@@ -52,7 +52,7 @@ const DeckPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#212121',
   },
   content: {
     paddingHorizontal: 20,
@@ -62,11 +62,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#F2CC0F',
     marginBottom: 24,
   },
   seriesList: {
@@ -75,13 +75,16 @@ const styles = StyleSheet.create({
   seriesCard: {
     borderRadius: 12,
     height: 120,
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 4,
+    // elevation: 3,
     marginBottom: 16,
     padding: 16,
   },

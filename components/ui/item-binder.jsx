@@ -1,9 +1,7 @@
 import React from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 
-
-
-const BinderCard = ({ image, name, setName, qty = 1, price, onPress }) => {
+const BinderCard = ({ image, name, setName, onPress }) => {
   return (
     <TouchableOpacity
       style={styles.card}
@@ -17,8 +15,8 @@ const BinderCard = ({ image, name, setName, qty = 1, price, onPress }) => {
         </Text>
         <Text style={styles.setName}>Set: {setName}</Text>
         <View style={styles.bottomRow}>
-          <Text style={styles.qtyText}>Qty: {qty}</Text>
-          <Text style={styles.priceText}>${price}</Text>
+          {/* <Text style={styles.qtyText}>Qty: {qty}</Text>
+          <Text style={styles.priceText}>${price}</Text> */}
         </View>
       </View>
     </TouchableOpacity>
@@ -27,13 +25,10 @@ const BinderCard = ({ image, name, setName, qty = 1, price, onPress }) => {
 
 export default BinderCard;
 
-// Styles remain the same as your version
-
-
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: "#212121",
+    borderRadius: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -42,11 +37,15 @@ const styles = StyleSheet.create({
     margin: 0,
     width: 150,
     overflow: "hidden",
-    borderWidth: 0.5,
-    borderColor: "#eee",
+    borderWidth: 3,
+    borderColor: "#F2CC0F",
   },
   cardImage: {
-    width: "100%",
+    width: "90%",
+    alignItems: "center",
+    justifyContent: "center",
+    // marginTop: 10,
+    alignSelf: "center",
     height: 200,
   },
   cardContent: {
@@ -55,12 +54,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#000",
+    color: "#F2CC0F",
     marginBottom: 2,
   },
   setName: {
     fontSize: 12,
-    color: "#555",
+    color: "#F2CC0F",
     marginBottom: 6,
   },
   bottomRow: {
@@ -70,16 +69,11 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 12,
-    color: "#000",
+    color: "#F2CC0F",
   },
   priceText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#000",
+    color: "#F2CC0F",
   },
 });
-
-
-
-
-

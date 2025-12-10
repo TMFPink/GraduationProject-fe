@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform, 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -25,12 +26,18 @@ const EditProfileScreen = () => {
   const [userTag, setUserTag] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  
+  // IMAGES: Only store URIs. React Native reads binary from URI automatically.
   const [avatarUri, setAvatarUri] = useState('');
-  const [avatarBinary, setAvatarBinary] = useState('');
   const [coverUri, setCoverUri] = useState('');
-  const [coverBinary, setCoverBinary] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
+
+  // Password & Delete
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deleteEnabled, setDeleteEnabled] = useState(false);
 
   // Initialize form
   useEffect(() => {
@@ -47,25 +54,30 @@ const EditProfileScreen = () => {
 
   const handleBack = () => router.back();
 
-  // Avatar pickers
+  // Helper: Get mime type based on file extension
+  const getMimeType = (uri) => {
+    const extension = uri.split('.').pop().toLowerCase();
+    if (extension === 'png') return 'image/png';
+    if (extension === 'gif') return 'image/gif';
+    return 'image/jpeg'; // Default to jpeg
+  };
+
+  // --- Avatar Logic ---
   const handlePickAvatar = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        return Alert.alert('Permission Required', 'Please allow gallery access.');
-      }
+      if (!permission.granted) return Alert.alert('Permission Required', 'Please allow gallery access.');
 
+      // NOTE: Removed "base64: true". We want binary, so we just need the URI.
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         setAvatarUri(result.assets[0].uri);
-        setAvatarBinary(result.assets[0].base64 || '');
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to pick avatar.');
@@ -75,20 +87,16 @@ const EditProfileScreen = () => {
   const handleTakeAvatarPhoto = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        return Alert.alert('Permission Required', 'Please allow camera access.');
-      }
+      if (!permission.granted) return Alert.alert('Permission Required', 'Please allow camera access.');
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         setAvatarUri(result.assets[0].uri);
-        setAvatarBinary(result.assets[0].base64 || '');
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to take photo.');
@@ -103,25 +111,21 @@ const EditProfileScreen = () => {
     ]);
   };
 
-  // Cover pickers
+  // --- Cover Logic ---
   const handlePickCover = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        return Alert.alert('Permission Required', 'Please allow gallery access.');
-      }
+      if (!permission.granted) return Alert.alert('Permission Required', 'Please allow gallery access.');
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
-        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         setCoverUri(result.assets[0].uri);
-        setCoverBinary(result.assets[0].base64 || '');
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to pick cover image.');
@@ -131,20 +135,16 @@ const EditProfileScreen = () => {
   const handleTakeCoverPhoto = async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        return Alert.alert('Permission Required', 'Please allow camera access.');
-      }
+      if (!permission.granted) return Alert.alert('Permission Required', 'Please allow camera access.');
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
-        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         setCoverUri(result.assets[0].uri);
-        setCoverBinary(result.assets[0].base64 || '');
       }
     } catch (err) {
       Alert.alert('Error', 'Failed to take photo.');
@@ -159,34 +159,67 @@ const EditProfileScreen = () => {
     ]);
   };
 
+  // --- SAVE LOGIC (Binary Upload) ---
   const handleSave = async () => {
     if (!username.trim() || !email.trim()) {
       return Alert.alert('Validation Error', 'Username and email are required.');
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return Alert.alert('Validation Error', 'Please enter a valid email.');
-    }
-
     try {
       setLoading(true);
 
-      const updateData = {
-        username: username.trim(),
-        email: email.trim(),
-      };
+      // 1. Create FormData. This acts as the container for binary data.
+      const formData = new FormData();
 
-      if (userTag.trim()) updateData.userTag = userTag.trim();
-      if (phoneNumber.trim()) updateData.phone_number = phoneNumber.trim();
-      if (avatarBinary) updateData.avatar = avatarBinary;
-      if (coverBinary) updateData.cover = coverBinary;
+      // 2. Append standard text fields
+      formData.append('username', username.trim());
+      formData.append('email', email.trim());
+      
+      if (userTag.trim()) formData.append('userTag', userTag.trim());
+      if (phoneNumber.trim()) formData.append('phone_number', phoneNumber.trim());
 
-      console.log('=== UPDATING PROFILE ===');
-      console.log('Update data:', updateData);
+      // 3. Append Avatar (Binary)
+      // We check if the URI is valid and different from the remote URL (meaning user picked a new one)
+      if (avatarUri && avatarUri !== user.avatar_url) {
+        // Prepare the file object. React Native uses this to read binary data.
+        const fileObj = {
+          uri: Platform.OS === 'ios' ? avatarUri.replace('file://', '') : avatarUri,
+          name: avatarUri.split('/').pop() || 'avatar.jpg',
+          type: getMimeType(avatarUri),
+        };
+        formData.append('avatar', fileObj);
+      }
 
-      await authApi.updateProfile(updateData);
+      // 4. Append Cover (Binary)
+      if (coverUri && coverUri !== user.cover_url) {
+        const fileObj = {
+          uri: Platform.OS === 'ios' ? coverUri.replace('file://', '') : coverUri,
+          name: coverUri.split('/').pop() || 'cover.jpg',
+          type: getMimeType(coverUri),
+        };
+        formData.append('cover', fileObj);
+      }
 
+      // 5. Password logic
+      if (newPassword || confirmPassword) {
+        if (newPassword.length < 6) {
+           setLoading(false);
+           return Alert.alert('Error', 'Password must be at least 6 characters.');
+        }
+        if (newPassword !== confirmPassword) {
+           setLoading(false);
+           return Alert.alert('Error', 'Passwords do not match.');
+        }
+        formData.append('new_password', newPassword);
+      }
+
+      console.log('Sending FormData to API...');
+
+      // 6. Send the FormData
+      // Ensure your API function handles this (it does, based on your previous message)
+      await authApi.updateProfile(formData);
+
+      // 7. Refresh local user data
       const updatedUser = await authApi.getCurrentUser();
       setCurrentUser(updatedUser.metadata);
 
@@ -202,6 +235,32 @@ const EditProfileScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to permanently delete your account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await authApi.deleteAccount();
+              Alert.alert('Account Deleted', 'Your account has been removed.');
+              router.replace('/login');
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete account.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (initializing) {
@@ -300,13 +359,80 @@ const EditProfileScreen = () => {
             />
           </View>
 
+          {/* Password fields */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>New Password</Text>
+            <TextInput
+              style={styles.input}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="Enter new password"
+              secureTextEntry
+            />
+          </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <TextInput
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm new password"
+              secureTextEntry
+            />
+          </View>
+
+          {/* Delete Button */}
+          <View style={{ marginTop: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontSize: 14, color: '#333', marginRight: 10 }}>
+                Enable Account Deletion
+              </Text>
+              <TouchableOpacity
+                onPress={() => setDeleteEnabled(!deleteEnabled)}
+                style={{
+                  width: 50,
+                  height: 28,
+                  backgroundColor: deleteEnabled ? '#ff4444' : '#ccc',
+                  borderRadius: 20,
+                  justifyContent: deleteEnabled ? 'flex-end' : 'flex-start',
+                  padding: 3,
+                }}
+              >
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    backgroundColor: '#fff',
+                    borderRadius: 11,
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              disabled={!deleteEnabled}
+              style={{
+                paddingVertical: 14,
+                borderRadius: 8,
+                alignItems: 'center',
+                backgroundColor: deleteEnabled ? '#ff4444' : '#999',
+              }}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>
+                Delete Account
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#666" />
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}

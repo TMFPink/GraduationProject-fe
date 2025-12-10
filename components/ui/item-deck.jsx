@@ -158,14 +158,16 @@ const ItemDeck = ({
 const styles = StyleSheet.create({
   cardContainer: {
     width: 130,
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 12, // Slightly rounder
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.12,
+    // shadowRadius: 4,
+    // elevation: 3,
     marginBottom: 12,
     marginHorizontal: 6,
   },
@@ -192,8 +194,8 @@ const styles = StyleSheet.create({
     height: '90%',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#fff', // White border defines edges in stack
-    backgroundColor: '#f3f3f3',
+    // borderColor: '#fff', // White border defines edges in stack
+    // backgroundColor: '#f3f3f3',
     overflow: 'hidden',
     shadowColor: "#000",
     shadowOffset: {
@@ -212,10 +214,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#e9ecef',
+    borderWidth: 5,
+    borderColor: '#F2CC0F',
     borderStyle: 'dashed',
     width: '100%',
     height: '100%'
@@ -224,14 +226,14 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#F2CC0F',
     justifyContent: 'center',
     alignItems: 'center',
   },
   plusIcon: {
     fontSize: 30,
     fontWeight: '400',
-    color: '#fff',
+    color: '#212121',
     marginTop: -2,
   },
   deckImage: {
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
   deckName: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#1a1a1a',
+    color: '#F2CC0F',
     fontWeight: '600',
     lineHeight: 18,
     marginTop: 4,

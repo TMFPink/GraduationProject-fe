@@ -1,7 +1,9 @@
 export interface ChatSummary {
   user_id: string;
-  first_name: string;
-  last_name?: string;
+  // first_name: string;
+  // last_name?: string;
+  username: string;
+  avatar?: string;
   last_message: string;
   last_message_time: string;
   unread_count: number;

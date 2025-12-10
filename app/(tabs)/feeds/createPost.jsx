@@ -1,6 +1,3 @@
-// import { ThemedText } from '@/components/themed-text';
-// import { Colors } from '@/constants/theme';
-// import { useColorScheme } from '@/hooks/use-color-scheme';
 // import { postApi } from '@/src/api/post-api';
 // import { useAuth } from '@/src/contexts/auth-context';
 // import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +6,7 @@
 // import React, { useEffect, useRef, useState } from 'react';
 // import {
 //   View,
+//   Text, // Changed from ThemedText
 //   TextInput,
 //   TouchableOpacity,
 //   StyleSheet,
@@ -17,7 +15,6 @@
 //   KeyboardAvoidingView,
 //   Platform,
 //   Keyboard,
-//   Animated,
 //   Image,
 //   Dimensions,
 //   ScrollView,
@@ -26,6 +23,16 @@
 // import { SafeAreaView } from 'react-native-safe-area-context';
 
 // const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// // --- Static Colors Definition ---
+// const COLORS = {
+//   background: '#FFFFFF',
+//   text: '#000000',
+//   muted: '#8E8E93',
+//   border: '#E5E5EA',
+//   tint: '#007AFF', // Standard Blue
+//   tintDisabled: '#E5E5EA',
+// };
 
 // // --- Utility Functions ---
 
@@ -50,8 +57,6 @@
 // // --- Main Component ---
 
 // export default function CreatePostScreen() {
-//   const colorScheme = useColorScheme();
-//   const colors = Colors[colorScheme ?? 'light'];
 //   const router = useRouter();
 //   const { user } = useAuth();
 //   const richText = useRef();
@@ -178,23 +183,23 @@
 //   const canPost = content.trim().length > 0 && !isPosting;
 
 //   return (
-//     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+//     <SafeAreaView style={[styles.safeArea, { backgroundColor: COLORS.background }]} edges={['top', 'left', 'right']}>
       
 //       {/* 1. HEADER */}
-//       <View style={[styles.header, { borderBottomColor: colors.border }]}>
+//       <View style={[styles.header, { borderBottomColor: COLORS.border }]}>
 //         <TouchableOpacity onPress={handleClose} disabled={isPosting} hitSlop={10}>
-//           <ThemedText style={{ fontSize: 16, color: colors.text }}>Cancel</ThemedText>
+//           <Text style={{ fontSize: 16, color: COLORS.text }}>Cancel</Text>
 //         </TouchableOpacity>
 
 //         <TouchableOpacity
 //           onPress={handlePost}
 //           disabled={!canPost}
-//           style={[styles.postButton, { backgroundColor: canPost ? colors.tint : colors.border + '80' }]}
+//           style={[styles.postButton, { backgroundColor: canPost ? COLORS.tint : COLORS.tintDisabled }]}
 //         >
 //           {isPosting ? (
 //             <ActivityIndicator size="small" color="white" />
 //           ) : (
-//             <ThemedText style={styles.postButtonText}>Post</ThemedText>
+//             <Text style={styles.postButtonText}>Post</Text>
 //           )}
 //         </TouchableOpacity>
 //       </View>
@@ -216,21 +221,21 @@
 //                 style={styles.avatar} 
 //             />
 //             <View>
-//               <ThemedText type="defaultSemiBold" style={{marginBottom: 2}}>
+//               <Text style={{marginBottom: 2, fontWeight: '600', color: COLORS.text, fontSize: 16}}>
 //                 {user?.username || 'Username'}
-//               </ThemedText>
-//               <View style={[styles.pill, { borderColor: colors.border }]}>
-//                 <ThemedText style={[styles.pillText, { color: colors.tint }]}>Public</ThemedText>
-//                 <Ionicons name="chevron-down" size={10} color={colors.tint} />
+//               </Text>
+//               <View style={[styles.pill, { borderColor: COLORS.border }]}>
+//                 <Text style={[styles.pillText, { color: COLORS.tint }]}>Public</Text>
+//                 <Ionicons name="chevron-down" size={10} color={COLORS.tint} />
 //               </View>
 //             </View>
 //           </View>
 
 //           {/* 3. TITLE INPUT (Large & Bold) */}
 //           <TextInput
-//             style={[styles.titleInput, { color: colors.text }]}
+//             style={[styles.titleInput, { color: COLORS.text }]}
 //             placeholder="Post Title"
-//             placeholderTextColor={colors.muted}
+//             placeholderTextColor={COLORS.muted}
 //             value={title}
 //             onChangeText={setTitle}
 //             maxLength={100}
@@ -250,13 +255,13 @@
 //               initialHeight={150}
 //               editorStyle={{
 //                 backgroundColor: 'transparent',
-//                 color: colors.text,
-//                 placeholderColor: colors.muted,
+//                 color: COLORS.text,
+//                 placeholderColor: COLORS.muted,
 //                 contentCSSText: `
 //                   font-size: 17px; 
 //                   line-height: 24px;
 //                   min-height: 150px; 
-//                   color: ${colors.text};
+//                   color: ${COLORS.text};
 //                   font-family: System;
 //                 ` 
 //               }}
@@ -269,14 +274,13 @@
             
 //             {/* Image Preview (If selected) */}
 //             {selectedImage && (
-//               <View style={[styles.imageWrapper, { borderColor: colors.border }]}>
+//               <View style={[styles.imageWrapper, { borderColor: COLORS.border, backgroundColor: COLORS.border }]}>
 //                 <Image
 //                   source={{ uri: selectedImage }}
 //                   style={{
 //                     width: '100%',
 //                     height: (SCREEN_WIDTH - 32) / imageAspectRatio,
 //                     borderRadius: 12,
-//                     backgroundColor: colors.border
 //                   }}
 //                   resizeMode="contain"
 //                 />
@@ -287,14 +291,14 @@
 //             )}
 
 //             {/* Tags Input Section (Bottom) */}
-//             <View style={[styles.tagsRow, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
+//             <View style={[styles.tagsRow, { borderTopColor: COLORS.border, borderBottomColor: COLORS.border }]}>
 //               <View style={styles.tagIconWrapper}>
-//                 <Ionicons name="pricetag" size={16} color={colors.tint} />
+//                 <Ionicons name="pricetag" size={16} color={COLORS.tint} />
 //               </View>
 //               <TextInput
-//                 style={[styles.tagsInput, { color: colors.text }]}
+//                 style={[styles.tagsInput, { color: COLORS.text }]}
 //                 placeholder="Add tags (comma separated)"
-//                 placeholderTextColor={colors.muted}
+//                 placeholderTextColor={COLORS.muted}
 //                 value={tags}
 //                 onChangeText={setTags}
 //                 editable={!isPosting}
@@ -307,16 +311,16 @@
 //         </ScrollView>
 
 //         {/* 6. FLOATING TOOLBAR */}
-//         <View style={[styles.toolbarContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+//         <View style={[styles.toolbarContainer, { backgroundColor: COLORS.background, borderTopColor: COLORS.border }]}>
           
 //           {!isPosting && (
 //              <View style={styles.mediaButtonsRow}>
 //                 {/* Media Picker Button */}
 //                 <TouchableOpacity onPress={pickImage} style={styles.mediaButton}>
-//                    <Ionicons name="image-outline" size={24} color={colors.tint} />
+//                    <Ionicons name="image-outline" size={24} color={COLORS.tint} />
 //                 </TouchableOpacity>
                 
-//                 <View style={[styles.verticalDivider, { backgroundColor: colors.border }]} />
+//                 <View style={[styles.verticalDivider, { backgroundColor: COLORS.border }]} />
                 
 //                 {/* Formatting Toolbar */}
 //                 <RichToolbar
@@ -328,8 +332,8 @@
 //                     actions.insertLink,
 //                     actions.heading1,
 //                   ]}
-//                   iconTint={colors.text}
-//                   selectedIconTint={colors.tint}
+//                   iconTint={COLORS.text}
+//                   selectedIconTint={COLORS.tint}
 //                   style={{ backgroundColor: 'transparent', flex: 1 }}
 //                   flatContainerStyle={{ paddingHorizontal: 0 }}
 //                 />
@@ -368,7 +372,7 @@
 //   },
 //   scrollContent: {
 //     paddingHorizontal: 16,
-//     paddingTop: 16,
+//     paddingVertical: 16,
 //   },
 //   userRow: {
 //     flexDirection: 'row',
@@ -380,7 +384,7 @@
 //     width: 40,
 //     height: 40,
 //     borderRadius: 20,
-//     backgroundColor: '#eee',
+//     backgroundColor: '#EEEEEE',
 //   },
 //   pill: {
 //     flexDirection: 'row',

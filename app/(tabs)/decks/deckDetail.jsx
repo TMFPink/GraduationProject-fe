@@ -404,7 +404,7 @@ const loadMore = () => {
         </TouchableOpacity>
 
         {/* Search */}
-        {/* Search + Filter Row */}
+ {/* Search + Filter Row */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <TextInput
@@ -422,16 +422,15 @@ const loadMore = () => {
                 <Text style={styles.clearButtonText}>X</Text>
               </TouchableOpacity>
             ) : null}
-                      {/* Filter Icon Button */}
+          </View>
+
+          {/* Filter Icon Button */}
           <TouchableOpacity
             style={styles.filterIconButton}
             onPress={() => setIsFilterModalVisible(true)}
           >
             <MaterialCommunityIcons name="filter-variant" size={22} color="#333" />
           </TouchableOpacity>
-          </View>
-
-
         </View>
 
         {isSearchMode && (
@@ -605,7 +604,7 @@ const loadMore = () => {
    Styles
    -------------------------------------------------------------- */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#212121' },
   content: { paddingHorizontal: 20
 , paddingTop: 50
   },
@@ -613,18 +612,18 @@ const styles = StyleSheet.create({
 
   /* Header */
   backButton: { marginBottom: 20, paddingVertical: 5 },
-  backText: { fontSize: 18, fontWeight: '600', color: '#1a1a1a' },
+  backText: { fontSize: 18, fontWeight: '600', color: '#F2CC0F' },
   deckHeaderSection: { marginBottom: 16 },
   deckNameInput: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#ccc',
     marginBottom: 8,
   },
   deckCountsRow: {
@@ -632,7 +631,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: 8,
   },
-  deckCountText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  deckCountText: { fontSize: 13, color: '#F2CC0F', fontWeight: '500' },
 
   /* Action buttons */
   actionButtonsRow: {
@@ -643,33 +642,33 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2CC0F',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+
     paddingVertical: 12,
     alignItems: 'center',
   },
-  actionButtonText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  actionButtonText: { fontSize: 14, fontWeight: '600', color: '#212121' },
 
   /* Save */
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#F2CC0F',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 20,
   },
   saveButtonDisabled: { backgroundColor: '#9E9E9E' },
-  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  saveButtonText: { fontSize: 16, fontWeight: '600', color: '#212121' },
 
   /* Search */
-  searchRow: { marginBottom: 16 },
+  searchRow: { marginBottom: 16, flexDirection: 'row', gap: 10 },
   searchContainer: {
-    backgroundColor: '#fff',
+    flex: 1,
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -678,11 +677,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
   clearButton: { paddingHorizontal: 12, paddingVertical: 12 },
-  clearButtonText: { fontSize: 18, color: '#999', fontWeight: '600' },
-  searchModeText: { fontSize: 12, color: '#2196F3', marginTop: 4 },
+  clearButtonText: { fontSize: 18, color: '#F2CC0F', fontWeight: '600' },
+  searchModeText: { fontSize: 12, color: '#F2CC0F', marginTop: 4 },
 
   /* Controls */
   controlsRow: {
@@ -693,15 +692,15 @@ const styles = StyleSheet.create({
   },
   formatPickerContainer: { flex: 1 },
   filterContainer: { flex: 1 },
-  controlLabel: { fontSize: 12, color: '#666', marginBottom: 6 },
+  controlLabel: { fontSize: 12, color: '#F2CC0F', marginBottom: 6 },
   pickerWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    overflow: 'hidden',
+    // backgroundColor: '#212121',
+    borderRadius: 4,
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
+
   },
-  picker: { width: '100%' },
+  picker: { width: '100%', color: '#F2CC0F', backgroundColor: '#212121' },
 
   /* Sections */
   section: { marginBottom: 24 },
@@ -711,16 +710,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  sectionCount: { fontSize: 14, color: '#666', fontWeight: '500' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#F2CC0F' },
+  sectionCount: { fontSize: 14, color: '#F2CC0F', fontWeight: '500' },
 
   /* Card pool */
   cardPoolScroll: {
     maxHeight: 440,
-    backgroundColor: '#fff',
+    backgroundColor: '#21212186',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     padding: 8,
   },
   cardPoolGrid: {
@@ -734,12 +733,11 @@ const styles = StyleSheet.create({
   cardImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
+    // backgroundColor: '#2121217b',
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
+
   },
   cardImageText: { fontSize: 10, color: '#999', fontWeight: '600' },
 
@@ -768,10 +766,10 @@ const styles = StyleSheet.create({
   /* Deck containers */
   deckContainer: {
     height: 500,
-    backgroundColor: '#fff',
+    backgroundColor: '#2121217c',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     padding: 8,
   },
   smallDeckContainer: { height: 200 },
@@ -779,10 +777,8 @@ const styles = StyleSheet.create({
 filterIconButton: {
   width: 46,
   height: 46,
-  backgroundColor: '#fff',
+  backgroundColor: '#F2CC0F',
   borderRadius: 8,
-  borderWidth: 1,
-  borderColor: '#e0e0e0',
   alignItems: 'center',
   justifyContent: 'center',
 },

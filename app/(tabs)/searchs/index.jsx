@@ -41,14 +41,12 @@ const Search = () => {
       name: 'Yu-Gi-Oh!',
       domain: 'ygo',
       logoUrl: require('@/assets/images/ygo_banner.png'),
-      color: '#8B0000',
     },
     {
       id: 2,
       name: 'Pokémon',
       domain: 'pkm',
       logoUrl: require('@/assets/images/pkm_banner.png'),
-      color: '#FFCB05',
     },
     // {
     //   id: 3,
@@ -69,7 +67,6 @@ const Search = () => {
       name: 'Riftbound',
       domain: 'rb',
       logoUrl: require('@/assets/images/rb_banner.png'),
-      color: '#1a1a1a',
     },
   ];
 
@@ -183,7 +180,7 @@ const Search = () => {
   const renderFooter = () =>
     isLoadingMore ? (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#EA6C5D" />
+        <ActivityIndicator size="small" color="#212121" />
         <Text style={styles.footerText}>Loading more...</Text>
       </View>
     ) : null;
@@ -240,7 +237,7 @@ const Search = () => {
             style={styles.iconButton}
             onPress={() => router.navigate('/cameraScan')}
           >
-            <MaterialCommunityIcons name="qrcode-scan" size={24} color="#EA6C5D" />
+            <MaterialCommunityIcons name="qrcode-scan" size={24} color="#212121" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -253,7 +250,7 @@ const Search = () => {
             <MaterialCommunityIcons
               name="filter-variant"
               size={24}
-              color={Object.keys(activeFilters).length > 0 ? '#fff' : '#EA6C5D'}
+              color={Object.keys(activeFilters).length > 0 ? '#fff' : '#212121'}
             />
             {Object.keys(activeFilters).length > 0 && (
               <View style={styles.filterBadge}>
@@ -268,7 +265,7 @@ const Search = () => {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#EA6C5D" />
+          <ActivityIndicator size="large" color="#F2CC0F" />
           <Text style={styles.loadingText}>Loading cards...</Text>
         </View>
       ) : (
@@ -349,15 +346,15 @@ export default Search;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FB',
+    backgroundColor: '#212121',
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#212121',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -367,13 +364,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F2CC0F',
     marginBottom: 16,
   },
   domainPickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -381,7 +378,7 @@ const styles = StyleSheet.create({
   },
   domainPickerLogo: {
     width: '100%',
-    height: 100,
+    height: 70,
   },
   domainPickerButtonText: {
     flex: 1,
@@ -397,7 +394,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   domainPickerModal: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 16,
     width: '100%',
     maxHeight: '70%',
@@ -413,13 +410,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#E5E7EB',
   },
   domainPickerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#F2CC0F',
   },
   domainPickerList: {
     padding: 16,
@@ -430,13 +427,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F2CC0F',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   domainPickerItemActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
+    backgroundColor: '#212121',
+    borderColor: '#F2CC0F',
   },
   domainPickerItemLogo: {
     width: 50,
@@ -449,7 +446,7 @@ const styles = StyleSheet.create({
   domainPickerItemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#ffffff',
     marginBottom: 4,
   },
   searchRow: {
@@ -461,10 +458,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#212121',
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     paddingHorizontal: 12,
   },
   searchIcon: {
@@ -474,7 +471,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#F2CC0F',
   },
   clearButton: {
     padding: 4,
@@ -482,17 +479,17 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#EA6C5D',
+    backgroundColor: '#F2CC0F',
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#212121',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   iconButtonActive: {
-    backgroundColor: '#EA6C5D',
-    borderColor: '#EA6C5D',
+    backgroundColor: '#212121',
+    borderColor: '#212121',
   },
   filterBadge: {
     position: 'absolute',

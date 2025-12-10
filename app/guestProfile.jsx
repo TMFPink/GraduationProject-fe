@@ -83,6 +83,16 @@ const GuestProfileScreen = () => {
     setModalVisible(true);
   };
 
+  // NEW: Handle Message button press
+  const handleMessagePress = () => {
+    if (!guestUser) return;
+    
+    // Navigate to chat conversation with the guest user
+    // The userName is passed to display in the chat header
+    const fullName = guestUser.username;
+    router.push(`/(tabs)/feeds/chat/${userId}?userName=${encodeURIComponent(fullName)}`);
+  };
+
   // Fetch guest user data
   const fetchGuestUser = async () => {
     try {
@@ -102,174 +112,165 @@ const GuestProfileScreen = () => {
   };
 
   // Fetch guest user posts
-  // ✅ UPDATE fetchGuestPosts function
-const fetchGuestPosts = async () => {
-  try {
-    setPostsLoading(true);
-    const response = await postApi.getPostsByUserId(userId, 100, 1);
-    const rawPosts = response.metadata?.posts || [];
+  const fetchGuestPosts = async () => {
+    try {
+      setPostsLoading(true);
+      const response = await postApi.getPostsByUserId(userId, 100, 1);
+      const rawPosts = response.metadata?.posts || [];
 
-    const transformedPosts = rawPosts.map((post) => ({
-      ...post,
-      authorName: guestUser?.username || "Unknown User",
-      authorAvatar: guestUser?.avatar_url || null,
-      id: post.post_id,
-      authorId: post.user_id,
-      upvotes: post.upvotes,
-      downvotes: post.downvotes,
-      isUpvoted: post.isUpvoted || false,      // ✅ ADD THIS
-      isDownvoted: post.isDownvoted || false,  // ✅ ADD THIS
-    }));
+      const transformedPosts = rawPosts.map((post) => ({
+        ...post,
+        authorName: guestUser?.username || "Unknown User",
+        authorAvatar: guestUser?.avatar_url || null,
+        id: post.post_id,
+        authorId: post.user_id,
+        upvotes: post.upvotes,
+        downvotes: post.downvotes,
+        isUpvoted: post.isUpvoted || false,
+        isDownvoted: post.isDownvoted || false,
+      }));
 
-    setGuestPosts(transformedPosts);
-  } catch (error) {
-    console.error("Failed to fetch guest posts:", error);
-    setGuestPosts([]);
-  } finally {
-    setPostsLoading(false);
-  }
-};
+      setGuestPosts(transformedPosts);
+    } catch (error) {
+      console.error("Failed to fetch guest posts:", error);
+      setGuestPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
 
-// ✅ ADD VOTE HANDLERS (add these functions after fetchGuestCollections)
-const handleUpvote = async (postId) => {
-  const currentPost = guestPosts.find(p => p.id === postId);
-  if (!currentPost) return;
+  const handleUpvote = async (postId) => {
+    const currentPost = guestPosts.find(p => p.id === postId);
+    if (!currentPost) return;
 
-  const wasUpvoted = currentPost.isUpvoted;
-  const wasDownvoted = currentPost.isDownvoted;
-  const newIsUpvoted = !wasUpvoted;
-  const newIsDownvoted = false;
+    const wasUpvoted = currentPost.isUpvoted;
+    const wasDownvoted = currentPost.isDownvoted;
+    const newIsUpvoted = !wasUpvoted;
+    const newIsDownvoted = false;
 
-  try {
-    // Optimistic update
-    setGuestPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: newIsUpvoted,
-              isDownvoted: newIsDownvoted,
-            }
-          : post
-      )
-    );
-
-    const response = await postApi.upvotePost(postId);
-    
-    if (response && response.metadata) {
+    try {
       setGuestPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
             ? { 
-                ...post, 
-                upvotes: response.metadata.upvotes,
-                downvotes: response.metadata.downvotes,
+                ...post,
                 isUpvoted: newIsUpvoted,
                 isDownvoted: newIsDownvoted,
               }
             : post
         )
       );
-    }
-  } catch (err) {
-    console.error('Error upvoting post:', err);
-    // Revert on error
-    setGuestPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: wasUpvoted,
-              isDownvoted: wasDownvoted,
-            }
-          : post
-      )
-    );
-  }
-};
 
-const handleDownvote = async (postId) => {
-  const currentPost = guestPosts.find(p => p.id === postId);
-  if (!currentPost) return;
-
-  const wasUpvoted = currentPost.isUpvoted;
-  const wasDownvoted = currentPost.isDownvoted;
-  const newIsUpvoted = false;
-  const newIsDownvoted = !wasDownvoted;
-
-  try {
-    // Optimistic update
-    setGuestPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: newIsUpvoted,
-              isDownvoted: newIsDownvoted,
-            }
-          : post
-      )
-    );
-
-    const response = await postApi.downvotePost(postId);
-    
-    if (response && response.metadata) {
+      const response = await postApi.upvotePost(postId);
+      
+      if (response && response.metadata) {
+        setGuestPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  isUpvoted: newIsUpvoted,
+                  isDownvoted: newIsDownvoted,
+                }
+              : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error upvoting post:', err);
       setGuestPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
             ? { 
-                ...post, 
-                upvotes: response.metadata.upvotes,
-                downvotes: response.metadata.downvotes,
+                ...post,
+                isUpvoted: wasUpvoted,
+                isDownvoted: wasDownvoted,
+              }
+            : post
+        )
+      );
+    }
+  };
+
+  const handleDownvote = async (postId) => {
+    const currentPost = guestPosts.find(p => p.id === postId);
+    if (!currentPost) return;
+
+    const wasUpvoted = currentPost.isUpvoted;
+    const wasDownvoted = currentPost.isDownvoted;
+    const newIsUpvoted = false;
+    const newIsDownvoted = !wasDownvoted;
+
+    try {
+      setGuestPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post,
                 isUpvoted: newIsUpvoted,
                 isDownvoted: newIsDownvoted,
               }
             : post
         )
       );
-    }
-  } catch (err) {
-    console.error('Error downvoting post:', err);
-    // Revert on error
-    setGuestPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: wasUpvoted,
-              isDownvoted: wasDownvoted,
-            }
-          : post
-      )
-    );
-  }
-};
 
-const handleDeletePost = async (postId) => {
-  try {
-    const response = await postApi.deletePost(postId);
-    if (response.success) {
-      setGuestPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      const response = await postApi.downvotePost(postId);
+      
+      if (response && response.metadata) {
+        setGuestPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  isUpvoted: newIsUpvoted,
+                  isDownvoted: newIsDownvoted,
+                }
+              : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error downvoting post:', err);
+      setGuestPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post,
+                isUpvoted: wasUpvoted,
+                isDownvoted: wasDownvoted,
+              }
+            : post
+        )
+      );
     }
-  } catch (err) {
-    console.error('Error deleting post:', err);
-  }
-};
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      const response = await postApi.deletePost(postId);
+      if (response.success) {
+        setGuestPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+      }
+    } catch (err) {
+      console.error('Error deleting post:', err);
+    }
+  };
 
   // Fetch guest collections
   const fetchGuestCollections = async () => {
     try {
       setCollectionsLoading(true);
 
-      // Fetch owned cards for this user
       const ownedResponse = await ownedCardApi.getOwnedCardByUserId(userId, 1, 100);
       const ownedCardsData = ownedResponse.metadata?.ownedCards || [];
       setOwnedCards(ownedCardsData);
 
-      // Fetch collections/binders
       const collectionsResponse = await collectionApi.getAllCollection(1, 100);
       const collections = collectionsResponse.metadata?.collections || [];
-      // Filter binders that belong to this user
       const userBinders = collections.filter(
         (col) => col.user_id === userId && col.name !== "Owned Cards"
       );
@@ -306,7 +307,6 @@ const handleDeletePost = async (postId) => {
       await followApi.followToggle({ following_id: userId });
       setIsFollowing(!isFollowing);
       
-      // Update follower count
       setGuestUser((prev) => ({
         ...prev,
         followers_count: isFollowing
@@ -415,24 +415,35 @@ const handleDeletePost = async (postId) => {
                 </Text>
               </View>
             </View>
+            
+            {/* NEW: Action Buttons Row - Only show if viewing another user's profile */}
             {currentUser && currentUser.user_id !== userId && (
-              <TouchableOpacity
-                onPress={handleFollowToggle}
-                disabled={followLoading}
-                style={[
-                  styles.followButton,
-                  isFollowing && styles.followingButton,
-                ]}
-              >
-                <Text
+              <View style={styles.actionButtonsRow}>
+                <TouchableOpacity
+                  onPress={handleFollowToggle}
+                  disabled={followLoading}
                   style={[
-                    styles.followButtonText,
-                    isFollowing && styles.followingButtonText,
+                    styles.followButton,
+                    isFollowing && styles.followingButton,
                   ]}
                 >
-                  {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      isFollowing && styles.followingButtonText,
+                    ]}
+                  >
+                    {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleMessagePress}
+                  style={styles.messageButton}
+                >
+                  <Text style={styles.messageButtonText}>Message</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -521,9 +532,9 @@ const handleDeletePost = async (postId) => {
               <Posts 
                 key={post.post_id} 
                 post={post} 
-                onUpvote={() => handleUpvote(post.id)}      // ✅ ADD THIS
-                onDownvote={() => handleDownvote(post.id)}  // ✅ ADD THIS
-                onDelete={() => handleDeletePost(post.id)}  // ✅ ADD THIS
+                onUpvote={() => handleUpvote(post.id)}
+                onDownvote={() => handleDownvote(post.id)}
+                onDelete={() => handleDeletePost(post.id)}
                 currentUserId={currentUser?.user_id}  />)
             ) : (
               <View style={styles.emptyContainer}>
@@ -534,7 +545,6 @@ const handleDeletePost = async (postId) => {
 
           {/* Portfolio Tab */}
           <View style={[styles.tabPage, { width }]}>
-            {/* Featured cards */}
             <Text style={styles.tabHeader}>Featured Cards</Text>
 
             <View style={[styles.deckContainer, styles.smallDeckContainer]}>
@@ -577,7 +587,6 @@ const handleDeletePost = async (postId) => {
               </View>
             </View>
 
-            {/* Main Portfolio */}
             <Text style={styles.tabHeader}>Main Portfolio</Text>
             {collectionsLoading ? (
               <View style={styles.loadingContainer}>
@@ -701,12 +710,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   levelText: { fontSize: 12, color: "#333", fontWeight: "600" },
+  
+  // NEW: Action buttons container
+  actionButtonsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginLeft: 12,
+  },
+  
   followButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#000",
-    marginLeft: 12,
   },
   followingButton: {
     backgroundColor: "#fff",
@@ -721,6 +737,22 @@ const styles = StyleSheet.create({
   followingButtonText: {
     color: "#333",
   },
+  
+  // NEW: Message button styles
+  messageButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#4A5568",
+    borderWidth: 1,
+    borderColor: "#4A5568",
+  },
+  messageButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  
   userTag: { color: "#666", fontSize: 14, marginBottom: 4 },
   bio: { color: "#444", fontSize: 14 },
   link: { color: "#1a73e8", fontSize: 14, marginTop: 4 },
@@ -737,7 +769,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     position: "relative",
     marginTop: 50,
-    
   },
   tabButton: { flex: 1, alignItems: "center", paddingVertical: 10 },
   tabText: { fontSize: 15, color: "#888" },

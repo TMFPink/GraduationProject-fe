@@ -376,7 +376,7 @@ const CollectionDetailPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#212121',
   },
   content: {
     paddingHorizontal: 20,
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
   section: {
     marginBottom: 24,
@@ -398,13 +398,13 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: '#F2CC0F',
     marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#F2CC0F',
     marginBottom: 12,
   },
   sectionHeader: {
@@ -414,22 +414,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   nameInput: {
-    backgroundColor: 'white',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 18,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#f2cc0f7e',
     marginBottom: 12,
   },
   searchContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -446,15 +446,16 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 18,
-    color: '#999',
+    color: '#F2CC0F',
     fontWeight: '600',
   },
   ownedCardsContainer: {
     maxHeight: 440,
-    backgroundColor: 'white',
+    backgroundColor: '#212121',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
+
     padding: 8,
   },
   ownedCardsGrid: {
@@ -475,10 +476,8 @@ const styles = StyleSheet.create({
   ownedCardImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    borderRadius: 8,
+
   },
   disabledCard: {
     opacity: 0.4,
@@ -487,7 +486,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#8B0000',
+    backgroundColor: '#F2CC0F',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -496,7 +495,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quantityText: {
-    color: '#fff',
+    color: '#212121',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -540,10 +539,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   binderContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#212121',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     padding: 12,
     minHeight: 400,
     maxHeight: 600,
@@ -557,31 +556,15 @@ const styles = StyleSheet.create({
     width: '18%',
     aspectRatio: 0.686,
     borderRadius: 6,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    // backgroundColor: '#F2CC0F',
+    // borderWidth: 3,
+    // borderColor: '#F2CC0F',
     overflow: 'hidden',
     position: 'relative',
   },
   binderCardImage: {
     width: '100%',
     height: '100%',
-  },
-  removeIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(139, 0, 0, 0.8)',
-    borderRadius: 12,
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeIndicatorText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
   },
   emptyBinderContainer: {
     flex: 1,
@@ -597,7 +580,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#F2CC0F',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -608,7 +591,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: '#212121',
   },
 });
 

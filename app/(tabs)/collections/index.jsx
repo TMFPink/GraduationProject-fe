@@ -200,8 +200,8 @@ const CollectionPage = () => {
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search your binders..."
-            placeholderTextColor="#999"
+            placeholder="Search..."
+            placeholderTextColor="#F2CC0F"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -266,12 +266,6 @@ const CollectionPage = () => {
                         <Text style={styles.quantityText}>x{ownedCard.quantity}</Text>
                       </View>
                     )}
-                    <Text 
-                      style={styles.ownedCardName}
-                      numberOfLines={2}
-                    >
-                      {card.name}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -419,12 +413,12 @@ export default CollectionPage;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#212121',
   },
 
   // ===== Fixed Header =====
   fixedHeader: {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#212121',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 12,
@@ -432,7 +426,7 @@ const styles = StyleSheet.create({
 
   // ===== Fixed "My Binders" Header =====
   fixedBindersHeader: {
-    backgroundColor: '#fafafa',
+    backgroundColor: '#212121',
     paddingHorizontal: 20,
     paddingVertical: 12,
 
@@ -459,7 +453,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
 
   // ✅ Search Bar + Edit Button
@@ -471,22 +465,22 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: '#F2CC0F',
   },
   editButton: {
     width: 48,
     height: 48,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2CC0F',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -505,26 +499,26 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#ffffff',
   },
   viewAllButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F2CC0F',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   viewAllText: {
-    color: '#333',
+    color: '#212121',
     fontSize: 14,
     fontWeight: '500',
   },
 
   // ===== Deck Containers =====
   deckContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 3,
+    borderColor: '#F2CC0F',
     padding: 12,
   },
   featuredDeckContainer: {
@@ -565,7 +559,7 @@ const styles = StyleSheet.create({
   // ✅ Delete selected button
   deleteSelectedButton: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 10,
     left: 20,
     right: 20,
     backgroundColor: '#EF4444',
@@ -575,11 +569,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.3,
+    // shadowRadius: 8,
+    // elevation: 8,
   },
   deleteSelectedText: {
     color: '#fff',
@@ -596,32 +590,30 @@ const styles = StyleSheet.create({
   },
   ownedCardImage: {
     width: 100,
-    height: 146,
+    height: '100%',
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-  },
-  ownedCardName: {
-    marginTop: 4,
-    fontSize: 12,
-    color: '#1a1a1a',
-    textAlign: 'center',
-    width: 100,
+    backgroundColor: '#212121',
   },
   // Quantity Badge
   quantityBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#8B0000',
+    backgroundColor: '#F2CC0F',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     minWidth: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   quantityText: {
-    color: '#fff',
+    color: '#212121',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -635,7 +627,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#212121',
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -648,7 +640,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#ffffff',
     marginBottom: 12,
   },
   modalMessage: {

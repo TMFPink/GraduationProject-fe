@@ -7,14 +7,12 @@ export const gameSeries = [
     name: 'Yu-Gi-Oh!',
     domain: 'ygo', // This maps to card_type in API
     logoUrl: require('@/assets/images/ygo_banner.png'),
-    color: '#8B0000',
   },
   {
     id: 2,
     name: 'Pokémon',
     domain: 'pkm',
     logoUrl: require('@/assets/images/pkm_banner.png'),
-    color: '#FFCB05',
   },
 //   {
 //     id: 3,
@@ -35,7 +33,6 @@ export const gameSeries = [
     name: 'Riftbound',
     domain: 'rb',
     logoUrl: require('@/assets/images/rb_banner.png'),
-    color: '#1a1a1a',
   },
 ];
 

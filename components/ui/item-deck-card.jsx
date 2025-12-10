@@ -28,11 +28,19 @@ const DeckCardItem = ({ card, count, onAdd, onRemove, maxCount = 3 }) => {
         )}
       </View>
 
-      <Text style={styles.deckCardName} numberOfLines={1}>
+      {/* <Text style={styles.deckCardName} numberOfLines={1}>
         {card.name}
-      </Text>
+      </Text> */}
 
       <View style={styles.cardControls}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => onRemove(card)}
+        >
+          <Text style={styles.controlButtonText}>−</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.controlCount}>{count}</Text>
         <TouchableOpacity
           style={[
             styles.controlButton,
@@ -44,14 +52,7 @@ const DeckCardItem = ({ card, count, onAdd, onRemove, maxCount = 3 }) => {
           <Text style={styles.controlButtonText}>+</Text>
         </TouchableOpacity>
 
-        <Text style={styles.controlCount}>{count}</Text>
-
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={() => onRemove(card)}
-        >
-          <Text style={styles.controlButtonText}>−</Text>
-        </TouchableOpacity>
+        
       </View>
     </View>
   );
@@ -72,12 +73,10 @@ const styles = StyleSheet.create({
   cardImagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#e0e0e0",
     borderRadius: 4,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
+
   },
   cardImageText: {
     fontSize: 10,
@@ -88,13 +87,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "#F2CC0F",
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   countBadgeText: {
-    color: "white",
+    color: "#212121",
     fontSize: 10,
     fontWeight: "700",
   },
@@ -113,16 +112,16 @@ const styles = StyleSheet.create({
   controlButton: {
     width: 20,
     height: 20,
-    backgroundColor: "#2196F3",
+    backgroundColor: "#F2CC0F",
     borderRadius: 4,
     justifyContent: "center",
     alignItems: "center",
   },
   controlButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#F2CC0F",
   },
   controlButtonText: {
-    color: "white",
+    color: "#212121",
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 14,
@@ -130,7 +129,7 @@ const styles = StyleSheet.create({
   controlCount: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#333",
+    color: "#F2CC0F",
     minWidth: 12,
     textAlign: "center",
   },
