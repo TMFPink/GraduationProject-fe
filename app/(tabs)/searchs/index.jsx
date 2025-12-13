@@ -235,7 +235,10 @@ const Search = () => {
 
           <TouchableOpacity 
             style={styles.iconButton}
-            onPress={() => router.navigate('/cameraScan')}
+            onPress={() => router.navigate({
+              pathname:'/cameraScan',
+              params: { domain: selectedDomain }
+            })}
           >
             <MaterialCommunityIcons name="qrcode-scan" size={24} color="#212121" />
           </TouchableOpacity>
