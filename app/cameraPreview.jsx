@@ -78,7 +78,7 @@ export default function CameraPreviewScreen() {
           },
           {
             text: "Cancel",
-            onPress: () => router.navigate("/search"),
+            onPress: () => router.navigate("/(tabs)/searchs"),
             style: "cancel",
           },
         ]

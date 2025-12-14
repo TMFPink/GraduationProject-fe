@@ -1,19 +1,17 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import Posts from '@/components/ui/post';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { authApi } from '@/src/api/auth-api';
 import { postApi } from '@/src/api/post-api';
 import { useAuth } from '@/src/contexts/auth-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,8 +19,6 @@ import {
 } from 'react-native';
 
 export default function FeedsScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { user: currentUser } = useAuth();
   
@@ -104,8 +100,8 @@ export default function FeedsScreen() {
               tags: post.tags,
               createdAt: formatDate(post.createdAt),
               updatedAt: formatDate(post.updatedAt),
-              upvotes: post.upvotes,        // ✅ ADD THIS
-              downvotes: post.downvotes,    // ✅ ADD THIS
+              upvotes: post.upvotes,
+              downvotes: post.downvotes,
               likesCount: post.upvotes - post.downvotes,
               commentsCount: 0,
               isUpvoted: post.isUpvoted || false,    
@@ -182,145 +178,122 @@ export default function FeedsScreen() {
     }
   }, [loadingMore, hasMore, loading, page]);
 
-// CRITICAL: Update vote handlers with optimistic UI update
-const handleUpvote = async (postId) => {
-  // Get current vote state
-  const currentPost = posts.find(p => p.id === postId);
-  if (!currentPost) return;
+  const handleUpvote = async (postId) => {
+    const currentPost = posts.find(p => p.id === postId);
+    if (!currentPost) return;
 
-  const wasUpvoted = currentPost.isUpvoted;
-  const wasDownvoted = currentPost.isDownvoted;
+    const wasUpvoted = currentPost.isUpvoted;
+    const wasDownvoted = currentPost.isDownvoted;
+    const newIsUpvoted = !wasUpvoted;
+    const newIsDownvoted = false;
 
-  // Calculate new vote state based on toggle logic:
-  // - If already upvoted → remove (both false)
-  // - If not voted → upvote (isUpvoted true)
-  // - If downvoted → switch to upvote (isUpvoted true, isDownvoted false)
-  const newIsUpvoted = !wasUpvoted;
-  const newIsDownvoted = false;
-
-  try {
-    // Optimistically update UI immediately
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: newIsUpvoted,
-              isDownvoted: newIsDownvoted,
-            }
-          : post
-      )
-    );
-
-    // Call API
-    const response = await postApi.upvotePost(postId);
-    
-    // Update with actual counts from backend
-    if (response && response.metadata) {
+    try {
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
             ? { 
-                ...post, 
-                upvotes: response.metadata.upvotes,
-                downvotes: response.metadata.downvotes,
-                likesCount: response.metadata.upvotes - response.metadata.downvotes,
-                // Keep the optimistic vote state
+                ...post,
                 isUpvoted: newIsUpvoted,
                 isDownvoted: newIsDownvoted,
               }
             : post
         )
       );
-    }
-  } catch (err) {
-    console.error('Error upvoting post:', err);
-    // Revert optimistic update on error
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: wasUpvoted,
-              isDownvoted: wasDownvoted,
-            }
-          : post
-      )
-    );
-  }
-};
 
-const handleDownvote = async (postId) => {
-  // Get current vote state
-  const currentPost = posts.find(p => p.id === postId);
-  if (!currentPost) return;
-
-  const wasUpvoted = currentPost.isUpvoted;
-  const wasDownvoted = currentPost.isDownvoted;
-
-  // Calculate new vote state based on toggle logic:
-  // - If already downvoted → remove (both false)
-  // - If not voted → downvote (isDownvoted true)
-  // - If upvoted → switch to downvote (isDownvoted true, isUpvoted false)
-  const newIsUpvoted = false;
-  const newIsDownvoted = !wasDownvoted;
-
-  try {
-    // Optimistically update UI immediately
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: newIsUpvoted,
-              isDownvoted: newIsDownvoted,
-            }
-          : post
-      )
-    );
-
-    // Call API
-    const response = await postApi.downvotePost(postId);
-    
-    // Update with actual counts from backend
-    if (response && response.metadata) {
+      const response = await postApi.upvotePost(postId);
+      
+      if (response && response.metadata) {
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  likesCount: response.metadata.upvotes - response.metadata.downvotes,
+                  isUpvoted: newIsUpvoted,
+                  isDownvoted: newIsDownvoted,
+                }
+              : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error upvoting post:', err);
       setPosts(prevPosts =>
         prevPosts.map(post =>
           post.id === postId
             ? { 
-                ...post, 
-                upvotes: response.metadata.upvotes,
-                downvotes: response.metadata.downvotes,
-                likesCount: response.metadata.upvotes - response.metadata.downvotes,
-                // Keep the optimistic vote state
+                ...post,
+                isUpvoted: wasUpvoted,
+                isDownvoted: wasDownvoted,
+              }
+            : post
+        )
+      );
+    }
+  };
+
+  const handleDownvote = async (postId) => {
+    const currentPost = posts.find(p => p.id === postId);
+    if (!currentPost) return;
+
+    const wasUpvoted = currentPost.isUpvoted;
+    const wasDownvoted = currentPost.isDownvoted;
+    const newIsUpvoted = false;
+    const newIsDownvoted = !wasDownvoted;
+
+    try {
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post,
                 isUpvoted: newIsUpvoted,
                 isDownvoted: newIsDownvoted,
               }
             : post
         )
       );
+
+      const response = await postApi.downvotePost(postId);
+      
+      if (response && response.metadata) {
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? { 
+                  ...post, 
+                  upvotes: response.metadata.upvotes,
+                  downvotes: response.metadata.downvotes,
+                  likesCount: response.metadata.upvotes - response.metadata.downvotes,
+                  isUpvoted: newIsUpvoted,
+                  isDownvoted: newIsDownvoted,
+                }
+              : post
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Error downvoting post:', err);
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { 
+                ...post,
+                isUpvoted: wasUpvoted,
+                isDownvoted: wasDownvoted,
+              }
+            : post
+        )
+      );
     }
-  } catch (err) {
-    console.error('Error downvoting post:', err);
-    // Revert optimistic update on error
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { 
-              ...post,
-              isUpvoted: wasUpvoted,
-              isDownvoted: wasDownvoted,
-            }
-          : post
-      )
-    );
-  }
-};
+  };
+
   const handleDeletePost = async (postId) => {
     try {
       const response = await postApi.deletePost(postId);
       if (response.success) {
-        // Remove the post from the list
         setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
       }
     } catch (err) {
@@ -349,24 +322,24 @@ const handleDownvote = async (postId) => {
   );
 
   const renderHeader = () => (
-    <View style={[styles.header, { borderBottomColor: colors.border }]}>
-      <ThemedText type="title" style={[styles.headerTitle, { color: colors.text }]}>
+    <View style={styles.header}>
+      <ThemedText type="title" style={styles.headerTitle}>
         Feeds
       </ThemedText>
       <View style={styles.headerButtons}>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.tint }]}
+          style={styles.iconButton}
           onPress={handleCreatePost}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={24} color="white" />
+          <Ionicons name="add" size={24} color="#212121" />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.tint }]}
+          style={styles.iconButton}
           onPress={handleChatPress}
           activeOpacity={0.7}
         >
-          <Ionicons name="chatbubble-outline" size={24} color="white" />
+          <Ionicons name="chatbubble-outline" size={24} color="#212121" />
         </TouchableOpacity>
       </View>
     </View>
@@ -377,15 +350,15 @@ const handleDownvote = async (postId) => {
     
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="newspaper-outline" size={64} color={colors.muted} />
-        <ThemedText style={[styles.emptyText, { color: colors.text }]}>
+        <Ionicons name="newspaper-outline" size={64} color="#999999" />
+        <ThemedText style={styles.emptyText}>
           No posts yet
         </ThemedText>
-        <ThemedText style={[styles.emptySubtext, { color: colors.muted }]}>
+        <ThemedText style={styles.emptySubtext}>
           Be the first to create a post!
         </ThemedText>
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.tint }]}
+          style={styles.createButton}
           onPress={handleCreatePost}
         >
           <ThemedText style={styles.createButtonText}>Create Post</ThemedText>
@@ -399,8 +372,8 @@ const handleDownvote = async (postId) => {
     
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={colors.tint} />
-        <ThemedText style={[styles.loadingText, { color: colors.muted }]}>
+        <ActivityIndicator size="small" color="#007AFF" />
+        <ThemedText style={styles.footerLoadingText}>
           Loading more posts...
         </ThemedText>
       </View>
@@ -411,7 +384,7 @@ const handleDownvote = async (postId) => {
     if (!error) return null;
     
     return (
-      <View style={[styles.errorBanner, { backgroundColor: '#ff4444' }]}>
+      <View style={styles.errorBanner}>
         <Ionicons name="alert-circle" size={20} color="white" />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity onPress={() => setError(null)}>
@@ -424,12 +397,12 @@ const handleDownvote = async (postId) => {
   // Loading state
   if (loading && posts.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={styles.container}>
         <ThemedView style={styles.container}>
           {renderHeader()}
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.tint} />
-            <ThemedText style={[styles.loadingText, { color: colors.muted }]}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <ThemedText style={styles.loadingText}>
               Loading posts...
             </ThemedText>
           </View>
@@ -439,7 +412,7 @@ const handleDownvote = async (postId) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={styles.container}>
       <ThemedView style={styles.container}>
         {renderHeader()}
         {renderError()}
@@ -456,8 +429,8 @@ const handleDownvote = async (postId) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.tint}
-              colors={[colors.tint]}
+              tintColor="#007AFF"
+              colors={['#007AFF']}
             />
           }
           onEndReached={handleLoadMore}
@@ -473,6 +446,7 @@ const handleDownvote = async (postId) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#212121',
   },
   header: {
     flexDirection: 'row',
@@ -481,10 +455,13 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    // borderBottomWidth: 1,
+    // borderBottomColor: '#ffffff',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    color: '#F2CC0F',
   },
   headerButtons: {
     flexDirection: 'row',
@@ -495,19 +472,21 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: '#F2CC0F',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    // shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 2,
+    // },
+    // shadowOpacity: 0.25,
+    // shadowRadius: 3.84,
+    // elevation: 5,
   },
   listContent: {
-    padding: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   listContentEmpty: {
     flexGrow: 1,
@@ -521,11 +500,16 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     marginTop: 8,
+    color: '#999999',
   },
   footerLoader: {
     paddingVertical: 20,
     alignItems: 'center',
     gap: 8,
+  },
+  footerLoadingText: {
+    fontSize: 14,
+    color: '#999999',
   },
   emptyContainer: {
     flex: 1,
@@ -538,19 +522,22 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginTop: 16,
+    color: '#000000',
   },
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
+    color: '#999999',
   },
   createButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
     marginTop: 16,
+    backgroundColor: '#F2CC0F',
   },
   createButtonText: {
-    color: 'white',
+    color: '#212121',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -560,6 +547,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
+    backgroundColor: '#FF4444',
   },
   errorText: {
     flex: 1,

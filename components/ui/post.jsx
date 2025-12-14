@@ -1,5 +1,3 @@
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -7,8 +5,6 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import RenderHtml from 'react-native-render-html';
 
 const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
 
   // Get vote state from post data
@@ -59,11 +55,11 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
 
   // HTML styles
   const tagsStyles = {
-    body: { color: colors.text, fontSize: 15, lineHeight: 22 },
+    body: { color: '#ffffff', fontSize: 15, lineHeight: 22 },
     p: { marginTop: 0, marginBottom: 8 },
-    a: { color: colors.tint },
-    h1: { fontSize: 24, fontWeight: 'bold', marginBottom: 8, color: colors.text },
-    h2: { fontSize: 20, fontWeight: 'bold', marginBottom: 6, color: colors.text },
+    a: { color: '#F2CC0F' },
+    h1: { fontSize: 24, fontWeight: 'bold', marginBottom: 8, color: '#ffffff' },
+    h2: { fontSize: 20, fontWeight: 'bold', marginBottom: 6, color: '#ffffff' },
     strong: { fontWeight: 'bold' },
     em: { fontStyle: 'italic' },
     ul: { marginLeft: 12 },
@@ -72,7 +68,7 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
 
   return (
     <TouchableOpacity 
-      style={[styles.postCard, { backgroundColor: colors.background }]}
+      style={styles.postCard}
       onPress={handlePostPress}
       activeOpacity={0.7}
     >
@@ -83,19 +79,19 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
           onPress={handleUserPress}
           activeOpacity={0.7}
         >
-          <View style={[styles.avatar, { backgroundColor: colors.tint + '40' }]}>
+          <View style={styles.avatar}>
             {post.authorAvatar ? (
               <Image source={{ uri: post.authorAvatar }} style={styles.avatarImage} />
             ) : (
-              <MaterialCommunityIcons name="account" size={24} color={colors.tint} />
+              <MaterialCommunityIcons name="account" size={24} color="#F2CC0F" />
             )}
           </View>
           
           <View style={styles.postMeta}>
-            <Text style={[styles.postUsername, { color: colors.text }]}>
+            <Text style={styles.postUsername}>
               {post.authorName || 'Unknown User'}
             </Text>
-            <Text style={[styles.postDate, { color: colors.muted }]}>
+            <Text style={styles.postDate}>
               {post.createdAt}
             </Text>
           </View>
@@ -103,14 +99,14 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
 
         {currentUserId === post.authorId && (
           <TouchableOpacity onPress={handleDelete}>
-            <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.muted} />
+            <MaterialCommunityIcons name="dots-vertical" size={24} color="#F2CC0F" />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Title */}
       {post.title && (
-        <Text style={[styles.postTitle, { color: colors.text }]}>
+        <Text style={styles.postTitle}>
           {post.title}
         </Text>
       )}
@@ -139,11 +135,8 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
       {post.tags && post.tags.length > 0 && (
         <View style={styles.tagsContainer}>
           {post.tags.map((tag, index) => (
-            <View 
-              key={index} 
-              style={[styles.tag, { backgroundColor: colors.tint + '15' }]}
-            >
-              <Text style={[styles.tagText, { color: colors.tint }]}>
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>
                 #{tag}
               </Text>
             </View>
@@ -152,49 +145,44 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
       )}
 
       {/* Actions Bar */}
-      <View style={[styles.actionsBar, { borderTopColor: colors.border }]}>
+      <View style={styles.actionsBar}>
         <View style={styles.voteSection}>
-          {/* Upvote - highlighted if user voted */}
+          {/* Upvote */}
           <TouchableOpacity 
             style={[
               styles.voteButton,
-              isUpvoted && { backgroundColor: colors.tint + '20' }
+              isUpvoted && styles.upvotedButton
             ]}
             onPress={handleUpvote}
           >
             <MaterialCommunityIcons 
               name={isUpvoted ? 'arrow-up-bold' : 'arrow-up-bold-outline'}
               size={22} 
-              color={isUpvoted ? colors.tint : colors.muted} 
+              color={isUpvoted ? '#F2CC0F' : '#f2cc0f5e'} 
             />
           </TouchableOpacity>
 
           {/* Vote Count */}
           <Text style={[
-            styles.voteCount, 
-            { 
-              color: isUpvoted 
-                ? colors.tint 
-                : isDownvoted 
-                ? '#ff4444' 
-                : colors.text 
-            }
+            styles.voteCount,
+            isUpvoted && styles.upvotedText,
+            isDownvoted && styles.downvotedText
           ]}>
             {displayVotes}
           </Text>
 
-          {/* Downvote - highlighted if user voted */}
+          {/* Downvote */}
           <TouchableOpacity 
             style={[
               styles.voteButton,
-              isDownvoted && { backgroundColor: '#ff444420' }
+              isDownvoted && styles.downvotedButton
             ]}
             onPress={handleDownvote}
           >
             <MaterialCommunityIcons 
               name={isDownvoted ? 'arrow-down-bold' : 'arrow-down-bold-outline'}
               size={22} 
-              color={isDownvoted ? '#ff4444' : colors.muted} 
+              color={isDownvoted ? '#F2CC0F' : '#f2cc0f5e'} 
             />
           </TouchableOpacity>
         </View>
@@ -207,8 +195,8 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
             handlePostPress();
           }}
         >
-          <MaterialCommunityIcons name="comment-outline" size={20} color={colors.muted} />
-          <Text style={[styles.actionText, { color: colors.muted }]}>
+          <MaterialCommunityIcons name="comment-outline" size={20} color="#f2cc0f5e" />
+          <Text style={styles.actionText}>
             {post.commentsCount || 0}
           </Text>
         </TouchableOpacity>
@@ -218,8 +206,8 @@ const Posts = ({ post, onUpvote, onDownvote, onDelete, currentUserId }) => {
           style={styles.actionButton}
           onPress={(e) => e.stopPropagation()}
         >
-          <MaterialCommunityIcons name="share-outline" size={20} color={colors.muted} />
-          <Text style={[styles.actionText, { color: colors.muted }]}>Share</Text>
+          <MaterialCommunityIcons name="share-outline" size={20} color="#f2cc0f5e" />
+          <Text style={styles.actionText}>Share</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -230,14 +218,17 @@ export default Posts;
 
 const styles = StyleSheet.create({
   postCard: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#212121',
+    borderWidth: 2,
+    borderColor: '#f2cc0f5e',
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 4,
+    // elevation: 2,
   },
   postHeader: {
     flexDirection: 'row',
@@ -258,6 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
     overflow: 'hidden',
+    backgroundColor: '#F2CC0F',
   },
   avatarImage: {
     width: 40,
@@ -271,15 +263,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginBottom: 2,
+    color: '#F2CC0F',
   },
   postDate: {
     fontSize: 12,
+    color: '#f2cc0f5e',
   },
   postTitle: {
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 24,
     marginBottom: 12,
+    color: '#ffffff',
   },
   thumbnailContainer: {
     width: '100%',
@@ -305,16 +300,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
+    backgroundColor: '#f2cc0f5e',
   },
   tagText: {
     fontSize: 12,
     fontWeight: '600',
+    color: '#F2CC0F',
   },
   actionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 12,
-    borderTopWidth: 1,
+
     gap: 16,
   },
   voteSection: {
@@ -326,11 +323,24 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
   },
+  upvotedButton: {
+    backgroundColor: '#f2cc0f5e',
+  },
+  downvotedButton: {
+    backgroundColor: '#f2cc0f5e',
+  },
   voteCount: {
     fontSize: 14,
     fontWeight: '700',
     minWidth: 30,
     textAlign: 'center',
+    color: '#F2CC0F',
+  },
+  upvotedText: {
+    color: '#F2CC0F',
+  },
+  downvotedText: {
+    color: '#F2CC0F',
   },
   actionButton: {
     flexDirection: 'row',
@@ -342,5 +352,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#F2CC0F',
   },
 });

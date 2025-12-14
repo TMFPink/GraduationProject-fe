@@ -18,12 +18,13 @@ export const cardDetectionApi = {
       console.log("  - Image URI:", imageUri);
       console.log("  - Domain:", domain);
       
-      const response = await baseApi.post("/card-detection/test", formData, {
+      const response = await baseApi.post("/card-detection", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 100000, // 60 seconds timeout
       });
-      
+       
       console.log("✅ Card detection response:", response);
       return convertToMetadata(response);
     } catch (error: any) {
@@ -37,34 +38,34 @@ export const cardDetectionApi = {
     }
   },
 
-  async detectCards(imageUri: string, domain: string = "ygo") {
-    try {
-      const formData = new FormData();
+//   async detectCards(imageUri: string, domain: string = "ygo") {
+//     try {
+//       const formData = new FormData();
       
-      formData.append("file", {
-        uri: imageUri,
-        name: "card_image.jpg",
-        type: "image/jpeg",
-      } as any);
+//       formData.append("file", {
+//         uri: imageUri,
+//         name: "card_image.jpg",
+//         type: "image/jpeg",
+//       } as any);
       
-      formData.append("domain", domain);
+//       formData.append("domain", domain);
       
-      const response = await baseApi.post("/card-detection", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+//       const response = await baseApi.post("/card-detection", formData, {
+//         headers: {
+//           "Content-Type": "multipart/form-data",
+//         },
+//       });
       
-      return convertToMetadata(response);
-    } catch (error: any) {
-      console.error("❌ API Error:", error);
-      throw new Error(
-        error.response?.data?.message || 
-        error.message || 
-        "Failed to detect cards"
-      );
-    }
-  },
+//       return convertToMetadata(response);
+//     } catch (error: any) {
+//       console.error("❌ API Error:", error);
+//       throw new Error(
+//         error.response?.data?.message || 
+//         error.message || 
+//         "Failed to detect cards"
+//       );
+//     }
+//   },
 
   async getDetectedCards(imageUri: string) {
     const response = await baseApi.post("/card-detection/name", { imageUri });

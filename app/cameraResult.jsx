@@ -48,7 +48,7 @@ export default function CameraResultScreen() {
 
   const handleDone = () => {
     // Navigate back to search page
-    router.navigate("/search");
+    router.navigate("/(tabs)/searchs");
   };
 
   const handleCardPress = (card) => {
